@@ -1,5 +1,6 @@
 // backend/src/config/index.ts
-export const config = {
+export const config1 = {
+  port: parseInt(process.env.PORT || '3000', 10),
     db: {
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT || '5432', 10),
@@ -20,5 +21,20 @@ export const config = {
       accessTokenExpiry: '15m',
       refreshTokenExpiry: '7d',
     },
+    redis: {
+      url: process.env.REDIS_URL || 'redis://localhost:6379',
+      port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      password: process.env.REDIS_PASSWORD
+    },
+    cors: {
+      origin: process.env.CORS_ORIGIN || '*'
+    },
+    api: {
+      pubmed: {
+        key: process.env.PUBMED_API_KEY
+      }
+    }
     // ... other config options
   };
+
+  export default config1;

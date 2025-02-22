@@ -8,12 +8,15 @@ import { EmailService } from '../services/email/email.service';
 import { ValidationService } from '../services/validation/validation.service';
 import { DatabaseService } from "../services/database/database.service";
 import { authLimiter, validateAuthInput, authenticateToken } from '../middleware/auth.middleware';
+import { config } from 'dotenv';
+import { config1 } from '../config';
+
 
 const router = Router();
 const authController = new AuthController(
   new AuthService(
     new ValidationService(),
-    new DatabaseService()
+    new DatabaseService(config1.db)
   ),
   new TokenService(),
   new EmailService()

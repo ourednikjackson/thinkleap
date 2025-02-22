@@ -1,10 +1,11 @@
-// backend/src/services/database/database.service.ts
+import { DatabaseConfig } from '@/config/types';
 import { Pool, QueryResult } from 'pg';
 
 export class DatabaseService {
     private pool: Pool;
+    private isConnected: boolean = false;
 
-    constructor() {
+    constructor(config: DatabaseConfig) {
         this.pool = new Pool({
             user: process.env.DB_USER,
             host: process.env.DB_HOST,
@@ -12,6 +13,45 @@ export class DatabaseService {
             password: process.env.DB_PASSWORD,
             port: parseInt(process.env.DB_PORT || '5432'),
         });
+
+        // Handle pool errors
+        this.pool.on('error', (err) => {
+            console.error('Unexpected error on idle client', err);
+            process.exit(-1);
+        });
+    }
+
+    async connect(): Promise<void> {
+        try {
+            // Test the connection
+            const client = await this.pool.connect();
+            client.release();
+            this.isConnected = true;
+            console.log('Successfully connected to database');
+        } catch (error) {
+            this.isConnected = false;
+            throw new Error(`Failed to connect to database: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    async disconnect(): Promise<void> {
+        try {
+            await this.pool.end();
+            this.isConnected = false;
+            console.log('Successfully disconnected from database');
+        } catch (error) {
+            throw new Error(`Failed to disconnect from database: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    async checkConnection(): Promise<boolean> {
+        try {
+            const client = await this.pool.connect();
+            client.release();
+            return true;
+        } catch (error) {
+            return false;
+        }
     }
 
     async findUserByEmail(email: string) {

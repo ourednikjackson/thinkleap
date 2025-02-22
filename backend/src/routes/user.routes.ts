@@ -5,11 +5,12 @@ import { UserService } from '../services/user/user.service';
 import { DatabaseService } from '../services/database/database.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { AuthenticatedRequest } from '../types/auth.types';
+import { config1 } from '../config';
 
 const router = Router();
 
 // Initialize services
-const databaseService = new DatabaseService();
+const databaseService = new DatabaseService(config1.db);
 const userService = new UserService(databaseService);
 const userController = new UserController(userService);
 
