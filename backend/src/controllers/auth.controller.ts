@@ -1,8 +1,10 @@
 // backend/src/controllers/auth.controller.ts
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth/auth.service';
 import { TokenService } from '../services/auth/token.service';
 import { EmailService } from '../services/email/email.service';
+import { PasswordResetService } from '../services/auth/password-reset.service';
+import { ValidationService } from '../services/validation/validation.service';
 import { 
     RegisterUserDTO, 
     LoginUserDTO, 
@@ -34,7 +36,9 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private tokenService: TokenService,
-    private emailService: EmailService
+    private emailService: EmailService,
+    private passwordResetService: PasswordResetService,
+    private validationService: ValidationService
   ) {}
 
   async signup(req: Request<{}, {}, RegisterUserDTO>, res: Response<AuthResponse>) {
@@ -85,7 +89,7 @@ export class AuthController {
               details: {} // Add relevant details
           }
       });
-  }
+    }
   }
 
   async login(req: Request<{}, {}, LoginUserDTO>, res: Response<AuthResponse>) {
@@ -110,7 +114,7 @@ export class AuthController {
             fullName: user.fullName,
             emailVerified: user.emailVerified
         }
-    });
+      });
     } catch (error) {
         res.status(401).json({
             success: false,
@@ -153,6 +157,60 @@ export class AuthController {
       res.json({ message: 'Logged out successfully' });
     } catch (error) {
       res.status(500).json({ error: 'Error logging out' });
+    }
+  }
+
+  async requestPasswordReset(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is required'
+        });
+      }
+      // We don't reveal if the email exists in our system for security reasons
+      await this.passwordResetService.createResetToken(email);
+      res.json({
+        success: true,
+        message: 'If your email exists in our system, you will receive password reset instructions'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { token, password } = req.body;
+      if (!token || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Token and password are required'
+        });
+      }
+      // Validate password
+      const passwordValidation = this.validationService.validatePassword(password);
+      if (!passwordValidation.isValid) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid password',
+          errors: passwordValidation.errors
+        });
+      }
+      const success = await this.passwordResetService.resetPassword(token, password);
+      if (!success) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid or expired token'
+        });
+      }
+      res.json({
+        success: true,
+        message: 'Password reset successfully'
+      });
+    } catch (error) {
+      next(error);
     }
   }
 }

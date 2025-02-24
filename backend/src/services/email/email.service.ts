@@ -16,4 +16,11 @@ export class EmailService {
         
         return Promise.resolve();
     }
-}
+  
+    async sendInstitutionVerificationEmail(email: string, code: string): Promise<void> {
+      console.log('Institution verification email would be sent to:', email);
+      console.log('With code:', code);
+      
+      return Promise.resolve();
+    }
+  }

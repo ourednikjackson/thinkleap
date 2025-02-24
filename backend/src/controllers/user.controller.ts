@@ -1,16 +1,18 @@
 // backend/src/controllers/user.controller.ts
-import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { UserService } from '../services/user/user.service';
+import { InstitutionVerificationService } from '../services/user/institution-verification.service';
 import { UpdateUserDTO } from '../types/user.types';
 import { UserNotFoundError } from '../types/errors/user.errors';
 import { AuthenticatedRequest } from '../types/auth.types';
 
-
-
 export class UserController {
-    constructor(private userService: UserService) {}
+    constructor(
+        private userService: UserService,
+        private institutionVerificationService: InstitutionVerificationService
+    ) {}
 
-    getProfile: RequestHandler = async (req, res, next) => {
+    getProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const userId = (req as AuthenticatedRequest).user.userId;
             const user = await this.userService.findById(userId);
@@ -28,7 +30,7 @@ export class UserController {
         }
     };
 
-    updateProfile: RequestHandler = async (req, res, next) => {
+    updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const userId = (req as AuthenticatedRequest).user.userId;
             const updateData: UpdateUserDTO = {
@@ -45,9 +47,9 @@ export class UserController {
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    deleteAccount: RequestHandler = async (req, res, next) => {
+    deleteAccount = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const userId = (req as AuthenticatedRequest).user.userId;
             await this.userService.delete(userId);
@@ -59,9 +61,9 @@ export class UserController {
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    updateLastActivity: RequestHandler = async (req, res, next) => {
+    updateLastActivity = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const userId = (req as AuthenticatedRequest).user.userId;
             await this.userService.updateLastLogin(userId);
@@ -73,5 +75,75 @@ export class UserController {
         } catch (error) {
             next(error);
         }
-    }
+    };
+
+    requestInstitutionVerification = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const userId = (req as AuthenticatedRequest).user.userId;
+            const { institutionEmail } = req.body;
+        
+            if (!institutionEmail) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Institution email is required'
+                });
+                return;
+            }
+        
+            await this.institutionVerificationService.createVerification(userId, institutionEmail);
+        
+            res.json({
+                success: true,
+                message: 'Verification code sent to institution email'
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
+    
+    verifyInstitutionCode = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const userId = (req as AuthenticatedRequest).user.userId;
+            const { code } = req.body;
+        
+            if (!code) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Verification code is required'
+                });
+                return;
+            }
+        
+            const verified = await this.institutionVerificationService.verifyCode(userId, code);
+        
+            if (!verified) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Invalid verification code'
+                });
+                return;
+            }
+        
+            res.json({
+                success: true,
+                message: 'Institution email verified successfully'
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
+    
+    getInstitutionVerificationStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const userId = (req as AuthenticatedRequest).user.userId;
+            const status = await this.institutionVerificationService.getVerificationStatus(userId);
+        
+            res.json({
+                success: true,
+                data: status
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
 }
