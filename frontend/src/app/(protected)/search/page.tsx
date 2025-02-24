@@ -1,9 +1,8 @@
-// app/(protected)/search/page.tsx
 'use client';
-
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { usePreferences } from '@/lib/preferences/PreferencesContext';
 import { SearchForm } from '@/components/search/SearchForm';
 import { FilterPanel } from '@/components/search/FilterPanel';
 import { SearchResults } from '@/components/search/SearchResults';
@@ -13,16 +12,25 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function SearchPage() {
   const { user } = useAuth();
+  const { preferences } = usePreferences();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<SearchResponse | null>(null);
-  const [filters, setFilters] = useState<SearchFilters>({});
+
+  // Initialize filters with empty arrays for authors and journals
+  const [filters, setFilters] = useState<SearchFilters>({
+    dateRange: undefined,
+    authors: [],
+    journals: [],
+    articleTypes: preferences.search.defaultFilters?.documentTypes,
+    languages: preferences.search.defaultFilters?.languages
+  });
 
   useEffect(() => {
     if (!user) {
-      router.push('/auth/login?redirect=/search');
+      router.push('/auth/login?redirect=/dashboard/search');
     }
   }, [user, router]);
 
@@ -34,6 +42,8 @@ export default function SearchPage() {
       const queryParams = new URLSearchParams({
         q: query,
         page: page.toString(),
+        limit: preferences.search.resultsPerPage.toString(),
+        sortBy: preferences.search.defaultSortOrder,
         filters: JSON.stringify(filters)
       });
 
@@ -65,7 +75,10 @@ export default function SearchPage() {
             <SearchForm onSearch={handleSearch} isLoading={isLoading} />
           </div>
           <div className="md:col-span-1">
-            <FilterPanel filters={filters} onFiltersChange={setFilters} />
+            <FilterPanel 
+              filters={filters} 
+              onFiltersChange={setFilters}
+            />
           </div>
         </div>
       </Card>
@@ -76,12 +89,12 @@ export default function SearchPage() {
         </Alert>
       )}
 
-      <SearchResults 
-        results={results} 
-        isLoading={isLoading} 
+      <SearchResults
+        results={results}
+        isLoading={isLoading}
         onPageChange={(page) => {
           handleSearch(searchParams.get('q') || '', page);
-        }} 
+        }}
       />
     </div>
   );

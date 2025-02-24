@@ -3,6 +3,7 @@ import { ReactNode } from 'react';
 import Link from 'next/link';
 import { routes } from '@/config/routes';
 
+
 interface DashboardLayoutProps {
   children: ReactNode;
 }

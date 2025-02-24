@@ -1,7 +1,7 @@
-// src/app/layout.tsx
 import { ReactNode } from 'react';
 import { AuthProvider } from '@/lib/auth';
 import { MainNav } from '@/components/layout/MainNav';
+import { Toaster } from "@/components/ui/sonner";
 import './globals.css';
 
 export const metadata = {
@@ -24,6 +24,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
               {children}
             </div>
           </div>
+          <Toaster />
         </AuthProvider>
       </body>
     </html>

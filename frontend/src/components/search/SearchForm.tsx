@@ -1,12 +1,11 @@
-// app/(protected)/search/components/SearchForm.tsx
 'use client';
-
 import { useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
 import debounce from 'lodash/debounce';
+import { usePreferences } from '@/lib/preferences/PreferencesContext';
 
 interface SearchFormProps {
   onSearch: (query: string) => Promise<void>;
@@ -16,19 +15,46 @@ interface SearchFormProps {
 export function SearchForm({ onSearch, isLoading }: SearchFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { preferences } = usePreferences();
   const [query, setQuery] = useState(searchParams.get('q') || '');
+
+  const buildSearchUrl = (searchQuery: string) => {
+    const params = new URLSearchParams({
+      q: searchQuery,
+      sortBy: preferences.search.defaultSortOrder,
+      limit: preferences.search.resultsPerPage.toString(),
+    });
+
+    // Add default filters if they exist
+    if (preferences.search.defaultFilters?.dateRange) {
+      params.append('dateRange', preferences.search.defaultFilters.dateRange);
+    }
+    if (preferences.search.defaultFilters?.documentTypes?.length) {
+      params.append('types', preferences.search.defaultFilters.documentTypes.join(','));
+    }
+    if (preferences.search.defaultFilters?.languages?.length) {
+      params.append('languages', preferences.search.defaultFilters.languages.join(','));
+    }
+
+    return `/dashboard/search?${params.toString()}`;
+  };
 
   const debouncedSearch = useCallback(
     debounce((value: string) => {
-      router.push(`/search?q=${encodeURIComponent(value)}`);
-      onSearch(value);
+      if (value.trim()) {
+        router.push(buildSearchUrl(value));
+        onSearch(value);
+      }
     }, 300),
-    [router, onSearch]
+    [router, onSearch, preferences]
   );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSearch(query);
+    if (query.trim()) {
+      router.push(buildSearchUrl(query));
+      onSearch(query);
+    }
   };
 
   return (
