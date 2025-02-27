@@ -1,3 +1,12 @@
+// frontend/src/lib/auth/AuthContext.tsx
+/* 
+ * DEPRECATED: This auth implementation has been consolidated into AuthProvider.tsx
+ * Please use the AuthProvider exported from index.ts instead.
+ * This file is kept for reference but should not be imported directly.
+ */
+
+"use client";
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription } from '@/components/ui/alert';

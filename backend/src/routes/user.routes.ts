@@ -8,11 +8,23 @@ import { DatabaseService } from '../services/database/database.service';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { AuthenticatedRequest } from '../types/auth.types';
 import { config1 } from '../config';
+import { userRateLimiter } from '@/middleware/extended-rate-limit.middleware';
 
 const router = Router();
 
+const dbConfig = {
+    user: config1.db.user || process.env.DB_USER || 'postgres',
+    host: config1.db.host || process.env.DB_HOST || 'localhost',
+    database: config1.db.name || process.env.DB_NAME || 'thinkleap', // Use name from config1 or env
+    password: config1.db.password || process.env.DB_PASSWORD || 'postgres',
+    port: config1.db.port || parseInt(process.env.DB_PORT || '5432', 10),
+    // Only use environment variable for SSL since config1.db.ssl does not exist
+    ssl: process.env.DB_SSL === 'true'
+  };
+  
+
 // Initialize services
-const databaseService = new DatabaseService(config1.db);
+const databaseService = new DatabaseService(dbConfig);
 const emailService = new EmailService();
 const userService = new UserService(databaseService);
 const institutionVerificationService = new InstitutionVerificationService(databaseService, emailService);
@@ -23,6 +35,7 @@ const userController = new UserController(userService, institutionVerificationSe
 
 // Protect all routes
 router.use(authenticateToken);
+router.use(userRateLimiter);
 
 // Routes
 router.get('/profile', userController.getProfile.bind(userController));

@@ -5,9 +5,12 @@ import helmet from 'helmet';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import searchRoutes from './routes/search.routes';
+import savedSearchRoutes from './routes/saved-search.routes';
+import preferencesRoutes from './routes/preferences.routes'
 import { CacheService } from './services/cache';
 import { Logger } from './services/logger';
 import { DatabaseService } from './services/database/database.service';
+import compression from 'compression';
 
 export interface AppConfig {
   logger: Logger;
@@ -62,28 +65,35 @@ export class App {
   }
 
   private setupMiddleware(): void {
-    // Security middleware
-    this.app.use(helmet());
-    
-    // CORS configuration
+    this.app.use(compression());
+
     this.app.use(cors({
-      origin: this.config.CORS_ORIGIN,
+      origin: this.config.CORS_ORIGIN, // Should include http://localhost:3000
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization']
     }));
-
-    // Body parsing
-    this.app.use(express.json());
-    this.app.use(express.urlencoded({ extended: true }));
-
-    // Request logging
-    this.app.use((req: Request, _res: Response, next: NextFunction) => {
-      this.logger.info(`${req.method} ${req.path}`, {
-        ip: req.ip,
-        userAgent: req.get('user-agent')
-      });
-      next();
-    });
+    // Enhanced security middleware
+    this.app.use(helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:'],
+          connectSrc: ["'self'", 'https://api.pubmed.gov'],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          mediaSrc: ["'none'"],
+          frameSrc: ["'none'"],
+        },
+      },
+      referrerPolicy: { policy: 'same-origin' },
+      xFrameOptions: { action: 'deny' },
+      strictTransportSecurity: {
+        maxAge: 63072000, // 2 years
+        includeSubDomains: true,
+      },
+    }));
   }
 
   private setupRoutes(): void {
@@ -96,6 +106,9 @@ export class App {
     this.app.use('/api/auth', authRoutes);
     this.app.use('/api/users', userRoutes);
     this.app.use('/api', searchRoutes);
+
+    this.app.use('/api/saved-searches', savedSearchRoutes);
+    this.app.use('/api/preferences', preferencesRoutes);
 
     // 404 handler
     this.app.use((_req: Request, res: Response) => {
@@ -115,5 +128,7 @@ export class App {
           : 'Internal Server Error'
       });
     });
+
+    
   }
 }

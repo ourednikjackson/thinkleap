@@ -1,34 +1,53 @@
 // src/lib/auth/AuthProvider.tsx
+"use client"
+
 import { ReactNode, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthContext } from './context';
 import { User } from './types';
+import { setCookie, getCookie, deleteCookie } from './cookie-utils'; // We'll create this
+
+// Add error translation function from AuthContext.tsx
+const translateError = (error: any) => {
+  if (error?.type === 'VALIDATION') {
+    if (error.message.includes('password')) {
+      return 'Please check your password requirements';
+    }
+    if (error.message.includes('email')) {
+      return 'Please enter a valid email address';
+    }
+    return 'Please check your input';
+  }
+  if (error?.type === 'DUPLICATE') {
+    return 'This email is already registered';
+  }
+  return 'An unexpected error occurred. Please try again.';
+};
 
 // Token refresh threshold (5 minutes before expiry)
 interface AuthProviderProps {
-    children: ReactNode;
-  }
-  
-  interface TokenResponse {
-    accessToken: string;
-    refreshToken: string;
-  }
-  
-  interface TokenData {
-    token: string;
-    expiresAt: number;
-  }
-  
-  const REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes before expiry
-  
-  export const AuthProvider = ({ children }: AuthProviderProps) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [accessToken, setAccessToken] = useState<TokenData | null>(null);
-    const router = useRouter();
-  
+  children: ReactNode;
+}
 
+interface TokenResponse {
+  accessToken: string;
+  refreshToken: string;
+}
+
+interface TokenData {
+  token: string;
+  expiresAt: number;
+}
+
+const REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes before expiry
+const COOKIE_OPTIONS = { path: '/', secure: process.env.NODE_ENV === 'production', sameSite: 'strict' };
+
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<TokenData | null>(null);
+  const router = useRouter();
 
   // Parse JWT and extract expiration
   const parseJwt = (token: string) => {
@@ -67,7 +86,8 @@ interface AuthProviderProps {
 
   // Refresh token
   const refreshTokens = useCallback(async (): Promise<TokenData | null> => {
-    const storedRefreshToken = localStorage.getItem('refreshToken');
+    // Get token from cookie instead of localStorage
+    const storedRefreshToken = getCookie('refreshToken');
     if (!storedRefreshToken) return null;
 
     try {
@@ -84,11 +104,14 @@ interface AuthProviderProps {
       
       if (!parsedToken) throw new Error('Invalid token received');
 
+      // Store refresh token in cookie instead of localStorage
+      setCookie('refreshToken', data.refreshToken, COOKIE_OPTIONS);
       setAccessToken(parsedToken);
       return parsedToken;
     } catch (error) {
       console.error('Token refresh error:', error);
-      localStorage.removeItem('refreshToken');
+      // Remove from cookie instead of localStorage
+      deleteCookie('refreshToken');
       setAccessToken(null);
       setUser(null);
       return null;
@@ -137,19 +160,23 @@ interface AuthProviderProps {
         body: JSON.stringify({ email, password })
       });
 
-      if (!response.ok) throw new Error('Invalid credentials');
+      const data = await response.json();
 
-      const data: TokenResponse & { user: User } = await response.json();
-      
+      if (!response.ok) {
+        throw data.error || new Error('Invalid credentials');
+      }
+
       const parsedToken = parseJwt(data.accessToken);
       if (!parsedToken) throw new Error('Invalid token received');
 
-      localStorage.setItem('refreshToken', data.refreshToken);
+      // Store refresh token in cookie instead of localStorage
+      setCookie('refreshToken', data.refreshToken, COOKIE_OPTIONS);
       setAccessToken(parsedToken);
       setUser(data.user);
       router.push('/dashboard');
     } catch (error) {
-      setError('Invalid email or password');
+      // Use the error translation function
+      setError(translateError(error));
       setUser(null);
       setAccessToken(null);
     }
@@ -164,19 +191,23 @@ interface AuthProviderProps {
         body: JSON.stringify({ email, password, fullName })
       });
 
-      if (!response.ok) throw new Error('Signup failed');
+      const data = await response.json();
 
-      const data: TokenResponse & { user: User } = await response.json();
-      
+      if (!response.ok) {
+        throw data.error || new Error('Signup failed');
+      }
+
       const parsedToken = parseJwt(data.accessToken);
       if (!parsedToken) throw new Error('Invalid token received');
 
-      localStorage.setItem('refreshToken', data.refreshToken);
+      // Store refresh token in cookie instead of localStorage
+      setCookie('refreshToken', data.refreshToken, COOKIE_OPTIONS);
       setAccessToken(parsedToken);
       setUser(data.user);
       router.push('/dashboard');
     } catch (error) {
-      setError('Error creating account');
+      // Use the error translation function
+      setError(translateError(error));
       setUser(null);
       setAccessToken(null);
     }
@@ -184,7 +215,8 @@ interface AuthProviderProps {
 
   const logout = async () => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
+      // Get token from cookie instead of localStorage
+      const refreshToken = getCookie('refreshToken');
       if (refreshToken) {
         await fetch('/api/auth/logout', {
           method: 'POST',
@@ -195,7 +227,8 @@ interface AuthProviderProps {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      localStorage.removeItem('refreshToken');
+      // Remove from cookie instead of localStorage
+      deleteCookie('refreshToken');
       setAccessToken(null);
       setUser(null);
       router.push('/auth/login');

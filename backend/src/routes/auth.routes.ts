@@ -11,11 +11,24 @@ import { DatabaseService } from "../services/database/database.service";
 import { authLimiter, validateAuthInput, authenticateToken } from '../middleware/auth.middleware';
 import { config } from 'dotenv';
 import { config1 } from '../config';
+import { authRateLimiter } from '@/middleware/extended-rate-limit.middleware';
 
 const router = Router();
 
+// Create a properly formatted database config
+const dbConfig = {
+  user: config1.db.user || process.env.DB_USER || 'postgres',
+  host: config1.db.host || process.env.DB_HOST || 'localhost',
+  database: config1.db.name || process.env.DB_NAME || 'thinkleap', // Use name from config1 or env
+  password: config1.db.password || process.env.DB_PASSWORD || 'postgres',
+  port: config1.db.port || parseInt(process.env.DB_PORT || '5432', 10),
+  // Only use environment variable for SSL since config1.db.ssl does not exist
+  ssl: process.env.DB_SSL === 'true'
+};
+
 // Initialize database service once to share among other services
-const databaseService = new DatabaseService(config1.db);
+const databaseService = new DatabaseService(dbConfig);
+
 const validationService = new ValidationService();
 const emailService = new EmailService();
 const tokenService = new TokenService();
@@ -25,8 +38,8 @@ const authService = new AuthService(validationService, databaseService);
 
 // Create password reset service with all required dependencies
 const passwordResetService = new PasswordResetService(
-  databaseService, 
-  emailService, 
+  databaseService,
+  emailService,
   authService
 );
 
@@ -40,7 +53,7 @@ const authController = new AuthController(
 );
 
 // Apply rate limiting to auth routes
-router.use(authLimiter);
+router.use(authRateLimiter);
 
 // Routes
 router.post('/signup', validateAuthInput, async (req: Request<{}, {}, RegisterUserDTO>, res: Response<AuthResponse>) => {

@@ -1,6 +1,7 @@
 // backend/src/services/cache/types.ts
 export interface CacheOptions {
     ttl?: number;  // Time to live in seconds
+    staleWhileRevalidate?: boolean;
   }
   
   export interface CacheService1 {

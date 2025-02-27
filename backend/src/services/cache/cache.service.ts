@@ -19,12 +19,27 @@ export class CacheService implements ICache {
     this.redis = new Redis(redisUrl);
   }
 
-  async get<T>(key: string): Promise<T | null> {
+  async get<T>(key: string, options: CacheOptions = {}): Promise<T | null> {
     const value = await this.redis.get(key);
     if (!value) return null;
     
     try {
-      return JSON.parse(value) as T;
+      const parsed = JSON.parse(value);
+      
+      // Check if we have the wrapped format with expiration
+      if (parsed.data && parsed.expires) {
+        // If stale-while-revalidate is enabled and data is expired
+        if (options.staleWhileRevalidate && parsed.expires < Date.now()) {
+          // Return stale data but trigger background refresh
+          setTimeout(() => this.redis.publish('cache:refresh', key), 0);
+          return parsed.data as T;
+        }
+        
+        return parsed.data as T;
+      }
+      
+      // Fallback for older cache format
+      return parsed as T;
     } catch {
       return null;
     }

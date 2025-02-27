@@ -1,7 +1,7 @@
 {
   "devDependencies": {
     "ts-node": "^10.9.2"
-  }, 
+  },
   "name": "thinkleap",
   "private": true,
   "workspaces": [
@@ -12,5 +12,8 @@
   "scripts": {
     "build": "npm run build --workspaces",
     "dev": "npm run dev --workspaces"
+  },
+  "dependencies": {
+    "tailwindcss-animate": "^1.0.7"
   }
 }

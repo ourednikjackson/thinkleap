@@ -1,4 +1,6 @@
 // src/lib/auth/context.tsx
+"use client"
+
 import { createContext } from 'react';
 import type { AuthContextType } from './types';
 

@@ -1,6 +1,8 @@
 // src/components/auth/SignupForm.tsx
+"use client";
+
 import { useState } from 'react';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth';
 
 export function SignupForm() {
   const [email, setEmail] = useState('');

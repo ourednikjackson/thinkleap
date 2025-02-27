@@ -5,27 +5,34 @@ import { isPublicRoute, isAuthRoute, routes } from '@/config/routes';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
   // Check if this is a public path
   const isPublicPath = isPublicRoute(pathname);
-  
+ 
   // Get the token from cookie
   const refreshToken = request.cookies.get('refreshToken')?.value;
   const isAuthenticated = !!refreshToken;
+  
+  // Apply security headers
+  const response = NextResponse.next();
+  
+  // Apply security headers
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('Referrer-Policy', 'same-origin');
 
-  // If authenticated and trying to access auth pages, redirect to dashboard
+  
+  // Conditional redirects based on auth state
   if (isAuthenticated && isAuthRoute(pathname)) {
     return NextResponse.redirect(new URL(routes.dashboard, request.url));
   }
-
-  // If not authenticated and trying to access protected routes
+  
   if (!isAuthenticated && !isPublicPath) {
     const loginUrl = new URL(routes.login, request.url);
     loginUrl.searchParams.set('from', pathname);
     return NextResponse.redirect(loginUrl);
   }
-
-  return NextResponse.next();
+  
+  return response;
 }
 
 // Configure middleware to run on specific paths

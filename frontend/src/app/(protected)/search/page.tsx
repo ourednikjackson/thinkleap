@@ -1,3 +1,5 @@
+// frontend/src/app/(protected)/search/page.tsx
+
 'use client';
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -35,10 +37,12 @@ export default function SearchPage() {
   }, [user, router]);
 
   const handleSearch = async (query: string, page = 1) => {
+    if (!query || query.trim() === '') return;
+    
     try {
       setIsLoading(true);
       setError(null);
-
+      
       const queryParams = new URLSearchParams({
         q: query,
         page: page.toString(),
@@ -46,19 +50,27 @@ export default function SearchPage() {
         sortBy: preferences.search.defaultSortOrder,
         filters: JSON.stringify(filters)
       });
-
+      
       const response = await fetch(`/api/search?${queryParams}`, {
         headers: {
           'Content-Type': 'application/json',
         }
       });
-
+      
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Search failed');
       }
-
+      
       const data = await response.json();
+      
+      // Store in client cache for reuse
+      const cacheKey = `search:${queryParams.toString()}`;
+      localStorage.setItem(cacheKey, JSON.stringify({
+        value: data,
+        expires: Date.now() + (5 * 60 * 1000) // 5 minutes
+      }));
+      
       setResults(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');

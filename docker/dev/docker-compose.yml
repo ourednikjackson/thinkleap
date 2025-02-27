@@ -32,8 +32,15 @@ services:
       - DB_NAME=thinkleap
       - DB_USER=postgres
       - DB_PASSWORD=postgres
+      - REDIS_URL=redis://redis:6379
     depends_on:
       - db
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6380:6379"
+
 
   db:
     image: postgres:14-alpine
