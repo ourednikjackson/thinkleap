@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
@@ -29,11 +29,7 @@ export function SavedSearchesList({ sortBy }: SavedSearchesListProps) {
   const [totalPages, setTotalPages] = useState(1);
   const [itemsPerPage] = useState(10);
 
-  useEffect(() => {
-    fetchSearches();
-  }, [page, sortBy]);
-
-  const fetchSearches = async () => {
+  const fetchSearches = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(
@@ -52,7 +48,13 @@ export function SavedSearchesList({ sortBy }: SavedSearchesListProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, sortBy, itemsPerPage]);
+
+  useEffect(() => {
+    fetchSearches();
+  }, [page, sortBy, fetchSearches]);
+
+  
 
   const executeSearch = async (id: string) => {
     try {

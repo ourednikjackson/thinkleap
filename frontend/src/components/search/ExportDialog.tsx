@@ -1,3 +1,4 @@
+// frontend/src/components/search/ExportDialog.tsx
 'use client';
 
 import { useState } from 'react';
@@ -19,28 +20,49 @@ import { SearchResult } from '@thinkleap/shared/types/search';
 interface ExportDialogProps {
   results: SearchResult[];
   totalResults: number;
+  searchQuery: string; // Add searchQuery parameter
+  searchFilters?: Record<string, any>; // Add filters parameter
 }
 
-export function ExportDialog({ results, totalResults }: ExportDialogProps) {
+export function ExportDialog({ 
+  results, 
+  totalResults,
+  searchQuery,
+  searchFilters = {}
+}: ExportDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [format, setFormat] = useState<'csv' | 'bibtex'>('csv');
   const [includeAbstract, setIncludeAbstract] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportAll, setExportAll] = useState(false); // New state for exporting all results
 
   const handleExport = async () => {
     try {
       setIsExporting(true);
 
+      // If exportAll is true, use search parameters to get all results
+      // Otherwise, use the IDs of the current page results only
+      const payload = exportAll ? {
+        // Send search parameters instead of full results
+        query: searchQuery,
+        filters: searchFilters,
+        options: {
+          format,
+          includeAbstract
+        }
+      } : {
+        // Send just the IDs of the current results (much smaller payload)
+        resultIds: results.map(r => r.id),
+        options: {
+          format,
+          includeAbstract
+        }
+      };
+
       const response = await fetch('/api/search/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          results,
-          options: {
-            format,
-            includeAbstract
-          }
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) throw new Error('Export failed');
@@ -100,8 +122,24 @@ export function ExportDialog({ results, totalResults }: ExportDialogProps) {
             <Label htmlFor="include-abstract">Include abstracts</Label>
           </div>
 
+          {/* Add option to export all results vs current page only */}
+          {totalResults > results.length && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="export-all"
+                checked={exportAll}
+                onCheckedChange={(checked) => setExportAll(checked as boolean)}
+              />
+              <Label htmlFor="export-all">
+                Export all {totalResults} results (not just current page)
+              </Label>
+            </div>
+          )}
+
           <div className="text-sm text-gray-500">
-            Exporting {results.length} of {totalResults} results
+            {exportAll 
+              ? `Exporting all ${totalResults} results` 
+              : `Exporting ${results.length} of ${totalResults} results`}
           </div>
 
           <Button

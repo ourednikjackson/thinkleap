@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { UserPreferences, DEFAULT_PREFERENCES } from '@thinkleap/shared/types/user-preferences';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
@@ -18,14 +18,9 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      loadPreferences();
-    }
-  }, [user]);
-
-  const loadPreferences = async () => {
+  const loadPreferences = useCallback(async () => {
     try {
+      setIsLoading(true);
       const response = await fetch('/api/preferences');
       if (!response.ok) throw new Error('Failed to load preferences');
       const data = await response.json();
@@ -35,7 +30,15 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [])
+  
+  useEffect(() => {
+    if (user) {
+      loadPreferences();
+    }
+  }, [user, loadPreferences]);
+
+  
 
   const updatePreference = async (path: string[], value: unknown) => {
     try {

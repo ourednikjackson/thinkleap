@@ -1,7 +1,7 @@
 // /frontend/src/components/auth/InstitutionVerification.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,7 @@ export function InstitutionVerification() {
     verifiedAt: string | null;
   } | null>(null);
 
-  const fetchVerificationStatus = async () => {
+  const fetchVerificationStatus = useCallback(async () => {
     try {
       const response = await fetch('/api/users/institution/status');
       if (!response.ok) {
@@ -30,12 +30,12 @@ export function InstitutionVerification() {
     } catch (error) {
       console.error(error);
     }
-  };
+  }, []);
 
   // Fetch status on component mount - FIXED: useEffect instead of useState
   useEffect(() => {
     fetchVerificationStatus();
-  }, []);
+  }, [fetchVerificationStatus]);
 
   const handleSendCode = async () => {
     if (!institutionEmail.toLowerCase().endsWith('.edu')) {
