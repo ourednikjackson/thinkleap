@@ -28,6 +28,7 @@ export function SavedSearchesList({ sortBy }: SavedSearchesListProps) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchSearches = useCallback(async () => {
     try {
@@ -58,6 +59,7 @@ export function SavedSearchesList({ sortBy }: SavedSearchesListProps) {
 
   const executeSearch = async (id: string) => {
     try {
+      setActionLoading(`execute-${id}`);
       const response = await fetch(`/api/saved-searches/${id}/execute`, {
         method: 'POST',
       });
@@ -67,15 +69,20 @@ export function SavedSearchesList({ sortBy }: SavedSearchesListProps) {
       }
       
       const data = await response.json();
+      
+      // Only navigate after successful response
       router.push(`/dashboard/search?q=${encodeURIComponent(data.data.query)}`);
       toast.success('Search executed successfully');
     } catch (err) {
       toast.error('Failed to execute search');
+    } finally {
+      setActionLoading(null);
     }
   };
-
+  
   const deleteSearch = async (id: string) => {
     try {
+      setActionLoading(`delete-${id}`);
       const response = await fetch(`/api/saved-searches/${id}`, {
         method: 'DELETE',
       });
@@ -84,10 +91,13 @@ export function SavedSearchesList({ sortBy }: SavedSearchesListProps) {
         throw new Error('Failed to delete search');
       }
       
+      // Refresh the list only after successful deletion
       await fetchSearches();
       toast.success('Search deleted successfully');
     } catch (err) {
       toast.error('Failed to delete search');
+    } finally {
+      setActionLoading(null);
     }
   };
 

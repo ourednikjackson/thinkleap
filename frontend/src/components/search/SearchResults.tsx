@@ -7,6 +7,7 @@ import { ExternalLink, Calendar, FileText, Globe, Link, BookOpen } from 'lucide-
 import { SearchResult, SearchResponse } from '@thinkleap/shared/types/search';
 import { cn } from '@/lib/utils';
 import { ExportDialog } from './ExportDialog';
+import { SearchResultsSkeleton } from './SearchResultsSkeleton';
 
 interface SearchResultsProps {
   results: SearchResponse | null;
@@ -24,32 +25,22 @@ export function SearchResults({ results, isLoading, onPageChange }: SearchResult
     return `${authors[0].name}, ${authors[1].name}, et al.`;
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(preferences.search.resultsPerPage)].map((_, i) => (
-          <Card key={i} className={cn(
-            "animate-pulse",
-            isDense ? "p-3" : "p-6"
-          )}>
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-            <div className="h-3 bg-gray-200 rounded w-1/2" />
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
-  if (!results || results.results.length === 0) {
-    return (
-      <Card className={cn(
-        "text-center text-gray-500",
-        isDense ? "p-3" : "p-6"
-      )}>
-        No results found
-      </Card>
-    );
-  }
+    // Early return for loading state
+    if (isLoading) {
+      return <SearchResultsSkeleton />;
+    }
+  
+    // Early return for no results
+    if (!results || !results.results || results.results.length === 0) {
+      return (
+        <Card className={cn(
+          "text-center text-gray-500",
+          isDense ? "p-3" : "p-6"
+        )}>
+          No results found
+        </Card>
+      );
+    }
 
   return (
     <div className="space-y-6">

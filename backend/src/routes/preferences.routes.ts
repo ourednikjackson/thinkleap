@@ -21,7 +21,7 @@ const dbConfig = {
 
 // Initialize services
 const logger = new Logger();
-const databaseService = new DatabaseService(dbConfig);
+const databaseService = DatabaseService.getInstance(dbConfig, logger);
 const preferencesService = new UserPreferencesService(databaseService, logger);
 
 // Initialize controller

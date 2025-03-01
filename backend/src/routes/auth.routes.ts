@@ -1,7 +1,7 @@
-// backend/src/routes/auth.routes.ts
 import { Router, Request, Response, NextFunction } from 'express';
 import { RegisterUserDTO, AuthResponse } from '../types/auth.types';
-import { AuthController, refreshToken } from '../controllers/auth.controller';
+import { AuthController } from '../controllers/auth.controller';
+import { Logger } from '../services/logger';
 import { AuthService } from '../services/auth/auth.service';
 import { TokenService } from '../services/auth/token.service';
 import { EmailService } from '../services/email/email.service';
@@ -27,7 +27,8 @@ const dbConfig = {
 };
 
 // Initialize database service once to share among other services
-const databaseService = new DatabaseService(dbConfig);
+const logger = new Logger();
+const databaseService = DatabaseService.getInstance(dbConfig, logger);
 
 const validationService = new ValidationService();
 const emailService = new EmailService();
@@ -66,7 +67,7 @@ router.get('/verify-email/:token', (req, res) => authController.verifyEmail(req,
 
 router.post('/refresh-token', (req, res) => authController.refreshToken(req, res));
 
-router.post('/logout', (req, res) => authController.logout(req, res));
+router.post('/logout', (req, res) => authController.logout(req, res,));
 
 // Password reset routes with fixed typing for arrow functions
 router.post('/forgot-password', (req: Request, res: Response, next: NextFunction) => {

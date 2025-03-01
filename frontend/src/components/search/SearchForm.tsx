@@ -49,11 +49,19 @@ export function SearchForm({ onSearch, isLoading }: SearchFormProps) {
     [router, onSearch, preferences]
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
-      router.push(buildSearchUrl(query));
-      onSearch(query);
+      try {
+        // First perform the search
+        await onSearch(query);
+        // Then navigate only after search completes
+        router.push(buildSearchUrl(query));
+      } catch (error) {
+        // Handle any errors from the search operation
+        console.error('Search failed:', error);
+        // Cannot set loading state here since it's a prop
+      }
     }
   };
 

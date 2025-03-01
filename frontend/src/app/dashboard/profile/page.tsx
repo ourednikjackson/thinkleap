@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { API_ENDPOINTS } from '@/config/api';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -26,7 +27,7 @@ export default function ProfilePage() {
   const handleUpdateProfile = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/users/profile', {
+      const response = await fetch(API_ENDPOINTS.USER.PROFILE, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -36,11 +37,14 @@ export default function ProfilePage() {
           email,
         }),
       });
-
+  
       if (!response.ok) {
         throw new Error('Failed to update profile');
       }
-
+  
+      // Wait for response to complete
+      await response.json();
+      
       toast.success('Profile updated successfully');
     } catch (error) {
       toast.error('Failed to update profile');
@@ -49,21 +53,25 @@ export default function ProfilePage() {
       setIsLoading(false);
     }
   };
-
+  
   const handleDeleteAccount = async () => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/users/account', {
         method: 'DELETE',
       });
-
+  
       if (!response.ok) {
         throw new Error('Failed to delete account');
       }
-
+  
       toast.success('Account deleted successfully');
-      // Redirect to homepage or login page
-      window.location.href = '/';
+      
+      // Only redirect after successful deletion
+      // Use a timeout to allow the toast to be visible
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1500);
     } catch (error) {
       toast.error('Failed to delete account');
       console.error(error);

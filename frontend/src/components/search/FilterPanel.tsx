@@ -33,11 +33,13 @@ export function FilterPanel({ filters, onFiltersChange }: FilterPanelProps) {
       setAuthor('');
     }
   };
-
+  
   const removeAuthor = (authorToRemove: string) => {
+    if (!filters.authors) return;
+    
     onFiltersChange({
       ...filters,
-      authors: filters.authors?.filter(a => a !== authorToRemove)
+      authors: filters.authors.filter(a => a !== authorToRemove)
     });
   };
 

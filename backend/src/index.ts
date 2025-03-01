@@ -1,32 +1,31 @@
 // backend/src/index.ts
 import * as dotenv from 'dotenv';
 
+// Load environment variables from .env file
 dotenv.config();
 
-import { config1 } from './config';
+import { config } from './config';
 import { Logger } from './services/logger';
 import { CacheService } from './services/cache';
 import { DatabaseService } from './services/database/database.service';
 import { App } from './app';
 
+// DatabaseConfig is now directly formatted for the DatabaseService
 const dbConfig = {
-  user: config1.db.user || process.env.DB_USER || 'postgres',
-  host: config1.db.host || process.env.DB_HOST || 'localhost',
-  database: config1.db.name || process.env.DB_NAME || 'thinkleap', // Use name from config1 or env
-  password: config1.db.password || process.env.DB_PASSWORD || 'postgres',
-  port: config1.db.port || parseInt(process.env.DB_PORT || '5432', 10),
-  // Only use environment variable for SSL since config1.db.ssl does not exist
-  ssl: process.env.DB_SSL === 'true'
+  user: config.db.user,
+  host: config.db.host,
+  database: config.db.name,
+  password: config.db.password,
+  port: config.db.port,
+  ssl: config.db.ssl
 };
-
-
 
 async function startServer() {
   const logger = new Logger();
 
   try {
     // Initialize services
-    const cacheService = new CacheService(config1.redis.url);
+    const cacheService = new CacheService(config.redis.url);
     const databaseService = new DatabaseService(dbConfig);
 
     // Wait for database connection
@@ -37,15 +36,15 @@ async function startServer() {
       logger,
       cacheService,
       databaseService,
-      env: config1,
-      NODE_ENV: process.env.NODE_ENV || 'development',
-      CORS_ORIGIN: config1.cors.origin
-  });
+      env: config,
+      NODE_ENV: config.env,
+      CORS_ORIGIN: config.cors.origin
+    });
 
     // Start server
-    const port = config1.port || 3001;
+    const port = config.port;
     app.app.listen(port, () => {
-      logger.info(`Server started on port ${port}`);
+      logger.info(`Server started on port ${port} in ${config.env} mode`);
     });
 
     // Handle shutdown

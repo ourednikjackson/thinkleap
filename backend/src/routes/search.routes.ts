@@ -26,7 +26,7 @@ const dbConfig = {
 
 // Initialize services
 const logger = new Logger();
-const databaseService = new DatabaseService(dbConfig);
+const databaseService = DatabaseService.getInstance(dbConfig, logger);
 const cacheService = new CacheService(process.env.REDIS_URL || 'redis://localhost:6379');
 const searchCache = new SearchCacheService(cacheService, logger);
 const searchService = new SearchService(

@@ -5,6 +5,7 @@ import { UserService } from '../services/user/user.service';
 import { InstitutionVerificationService } from '../services/user/institution-verification.service';
 import { EmailService } from '../services/email/email.service';
 import { DatabaseService } from '../services/database/database.service';
+import { Logger } from '../services/logger';
 import { authenticateToken } from '../middleware/auth.middleware';
 import { AuthenticatedRequest } from '../types/auth.types';
 import { config1 } from '../config';
@@ -24,7 +25,8 @@ const dbConfig = {
   
 
 // Initialize services
-const databaseService = new DatabaseService(dbConfig);
+const logger = new Logger();
+const databaseService = DatabaseService.getInstance(dbConfig, logger);
 const emailService = new EmailService();
 const userService = new UserService(databaseService);
 const institutionVerificationService = new InstitutionVerificationService(databaseService, emailService);

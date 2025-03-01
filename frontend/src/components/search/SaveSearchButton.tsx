@@ -33,7 +33,7 @@ export function SaveSearchButton({ query, filters }: SaveSearchButtonProps) {
     try {
       setIsSaving(true);
       setError(null);
-
+  
       const response = await fetch('/api/saved-searches', {
         method: 'POST',
         headers: {
@@ -46,16 +46,18 @@ export function SaveSearchButton({ query, filters }: SaveSearchButtonProps) {
           filters,
         }),
       });
-
+  
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to save search');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save search');
       }
-
+  
+      await response.json();
+  
       toast.success("Search Saved", {
         description: "Your search has been saved successfully."
       });
-
+  
       setIsOpen(false);
       setName('');
       setDescription('');

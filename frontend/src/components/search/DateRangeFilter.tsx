@@ -17,12 +17,14 @@ export function DateRangeFilter({ dateRange, onChange }: DateRangeFilterProps) {
           id="start-date"
           type="date"
           value={dateRange?.start?.toISOString().split('T')[0] || ''}
-          onChange={(e) =>
-            onChange({
-              ...dateRange,
-              start: e.target.value ? new Date(e.target.value) : undefined
-            })
-          }
+          onChange={(e) => {
+            // Create a new object instead of spreading potentially undefined dateRange
+            const newDateRange = {
+              start: e.target.value ? new Date(e.target.value) : undefined,
+              end: dateRange?.end
+            };
+            onChange(newDateRange);
+          }}
         />
       </div>
       <div>
@@ -31,12 +33,14 @@ export function DateRangeFilter({ dateRange, onChange }: DateRangeFilterProps) {
           id="end-date"
           type="date"
           value={dateRange?.end?.toISOString().split('T')[0] || ''}
-          onChange={(e) =>
-            onChange({
-              ...dateRange,
+          onChange={(e) => {
+            // Create a new object instead of spreading potentially undefined dateRange
+            const newDateRange = {
+              start: dateRange?.start,
               end: e.target.value ? new Date(e.target.value) : undefined
-            })
-          }
+            };
+            onChange(newDateRange);
+          }}
         />
       </div>
     </div>

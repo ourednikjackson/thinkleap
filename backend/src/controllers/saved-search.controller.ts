@@ -1,3 +1,4 @@
+// backend/src/controllers/saved-search.controller.ts
 import { Request, Response } from 'express';
 import { SavedSearchService } from '../services/search/saved-search.service';
 import { Logger } from '../services/logger';

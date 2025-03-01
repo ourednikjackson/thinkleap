@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AuthContext } from './context';
 import { User } from './types';
 import { setCookie, getCookie, deleteCookie } from './cookie-utils'; // We'll create this
+import { API_ENDPOINTS } from '@/config/api';
 
 // Add error translation function from AuthContext.tsx
 const translateError = (error: any) => {
@@ -37,6 +38,7 @@ interface TokenResponse {
 interface TokenData {
   token: string;
   expiresAt: number;
+  payload?: Record<string, any>;
 }
 
 const REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes before expiry
@@ -50,19 +52,53 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const router = useRouter();
 
   // Parse JWT and extract expiration
-  const parseJwt = (token: string) => {
+  const parseJwt = (token: string): TokenData | null => {
+    if (!token) return null;
+    
     try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
-        '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-      ).join(''));
-      const parsed = JSON.parse(jsonPayload);
+      // Split the token into its three parts
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        throw new Error('Invalid token format');
+      }
+      
+      // Get the payload section (middle part)
+      const payloadBase64 = parts[1];
+      
+      // Create proper base64 string by adding padding if needed
+      const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+      const paddedBase64 = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+      
+      // Use a safer approach to decode base64
+      let jsonPayload: string;
+      if (typeof window !== 'undefined') {
+        // Browser environment
+        const binary = window.atob(paddedBase64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        jsonPayload = new TextDecoder().decode(bytes);
+      } else {
+        // Node.js environment (for SSR)
+        jsonPayload = Buffer.from(paddedBase64, 'base64').toString();
+      }
+      
+      // Parse the JSON payload
+      const payload = JSON.parse(jsonPayload);
+      
+      // Verify that we have an expiration
+      if (!payload.exp) {
+        throw new Error('Token missing expiration');
+      }
+      
       return {
         token,
-        expiresAt: parsed.exp * 1000 // Convert to milliseconds
+        expiresAt: payload.exp * 1000, // Convert seconds to milliseconds
+        payload // Include full payload for additional claims if needed
       };
-    } catch (e) {
+    } catch (error) {
+      console.warn('Error parsing JWT:', error);
       return null;
     }
   };
@@ -121,16 +157,58 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Setup token refresh interval
   useEffect(() => {
     if (!accessToken) return;
-
-    const timeUntilRefresh = accessToken.expiresAt - Date.now() - REFRESH_THRESHOLD;
-    
-    if (timeUntilRefresh <= 0) {
-      refreshTokens();
-      return;
-    }
-
-    const refreshInterval = setInterval(refreshTokens, timeUntilRefresh);
-    return () => clearInterval(refreshInterval);
+  
+    let refreshTimeout: NodeJS.Timeout | null = null;
+    let refreshInterval: NodeJS.Timeout | null = null;
+  
+    // Function to schedule the next refresh
+    const scheduleRefresh = (delayMs: number) => {
+      // Clear any existing timeout
+      if (refreshTimeout) clearTimeout(refreshTimeout);
+      
+      refreshTimeout = setTimeout(async () => {
+        try {
+          // Attempt to refresh the token
+          const newToken = await refreshTokens();
+          if (newToken) {
+            // If successful, schedule next refresh based on new token
+            const nextRefreshTime = calculateTimeUntilRefresh(newToken);
+            scheduleRefresh(nextRefreshTime);
+          } else {
+            // If refresh failed, try again with backoff
+            scheduleRefresh(RETRY_INTERVAL);
+          }
+        } catch (error) {
+          console.error('Token refresh failed:', error);
+          // If refresh failed with error, try again with backoff
+          scheduleRefresh(RETRY_INTERVAL);
+        }
+      }, delayMs);
+    };
+  
+    // Calculate time until refresh with safeguards
+    const calculateTimeUntilRefresh = (token: TokenData): number => {
+      if (!token) return RETRY_INTERVAL;
+      
+      const timeUntil = token.expiresAt - Date.now() - REFRESH_THRESHOLD;
+      // Return either the time until refresh or a minimum time
+      return Math.max(timeUntil, MIN_REFRESH_INTERVAL);
+    };
+  
+    // Constants for timing
+    const REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes before expiry
+    const MIN_REFRESH_INTERVAL = 60 * 1000;  // Minimum 1 minute
+    const RETRY_INTERVAL = 30 * 1000;        // 30 seconds on failure
+  
+    // Initial scheduling
+    const initialRefreshTime = calculateTimeUntilRefresh(accessToken);
+    scheduleRefresh(initialRefreshTime);
+  
+    // Cleanup on unmount or when token changes
+    return () => {
+      if (refreshTimeout) clearTimeout(refreshTimeout);
+      if (refreshInterval) clearInterval(refreshInterval);
+    };
   }, [accessToken, refreshTokens]);
 
   // Initialize auth state
@@ -154,7 +232,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (email: string, password: string) => {
     try {
       setError(null);
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('API_ENDPOINTS.AUTH.LOGIN', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -185,7 +263,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signup = async (email: string, password: string, fullName: string) => {
     try {
       setError(null);
-      const response = await fetch('/api/auth/signup', {
+      const response = await fetch('API_ENDPOINTS.AUTH.SIGNUP', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, fullName })

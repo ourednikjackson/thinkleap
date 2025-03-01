@@ -1,6 +1,6 @@
-// backend/src/services/user/user.service.ts
 import { DatabaseService } from '../database/database.service';
 import { User, UpdateUserDTO } from '../../types/user.types';
+import { CustomError } from '../../errors/customError';
 
 export class UserService {
     constructor(private databaseService: DatabaseService) {}
@@ -39,7 +39,7 @@ export class UserService {
         );
         
         if (!result.rows[0]) {
-            throw new Error('User not found');
+            throw new CustomError('NOT_FOUND', 'User not found');
         }
         
         return result.rows[0];
@@ -52,7 +52,7 @@ export class UserService {
         );
         
         if (result.rowCount === 0) {
-            throw new Error('User not found');
+            throw new CustomError('NOT_FOUND', 'User not found');
         }
     }
 

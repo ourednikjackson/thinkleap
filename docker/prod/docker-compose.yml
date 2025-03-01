@@ -11,6 +11,10 @@ services:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=http://api.thinkleap.org
     restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - thinkleap-network
 
   backend:
     build:
@@ -25,9 +29,21 @@ services:
       - DB_NAME=thinkleap
       - DB_USER=postgres
       - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_URL=redis://redis:6379
     restart: unless-stopped
     depends_on:
       - db
+      - redis
+    networks:
+      - thinkleap-network
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - thinkleap-network
 
   db:
     image: postgres:14-alpine
@@ -38,6 +54,13 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    networks:
+      - thinkleap-network
 
 volumes:
   postgres_data:
+  redis_data:
+
+networks:
+  thinkleap-network:
+    driver: bridge
