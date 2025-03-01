@@ -4,10 +4,9 @@ import { DatabaseService } from '../database/database.service';
 import { AuthError, AuthErrorType, RegisterUserDTO, AuthResponse } from '../../types/auth.types';
 import { CustomError } from '../../errors/customError';
 
-const SALT_ROUNDS = 12;
 
 export class AuthService {
-    private static SALT_ROUNDS = 12;
+    private static readonly SALT_ROUNDS = 12;
 
     constructor(
         private validationService: ValidationService,
@@ -15,7 +14,7 @@ export class AuthService {
     ) {}
 
     async hashPassword(password: string): Promise<string> {
-        return bcrypt.hash(password, SALT_ROUNDS);
+        return bcrypt.hash(password, AuthService.SALT_ROUNDS);
     }
 
     async verifyPassword(plainPassword: string, hashedPassword: string): Promise<boolean> {

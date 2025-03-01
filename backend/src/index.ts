@@ -17,7 +17,6 @@ const dbConfig = {
   database: config.db.name,
   password: config.db.password,
   port: config.db.port,
-  ssl: config.db.ssl
 };
 
 async function startServer() {
@@ -26,7 +25,7 @@ async function startServer() {
   try {
     // Initialize services
     const cacheService = new CacheService(config.redis.url);
-    const databaseService = new DatabaseService(dbConfig);
+    const databaseService = DatabaseService.getInstance(dbConfig, logger);
 
     // Wait for database connection
     await databaseService.connect();

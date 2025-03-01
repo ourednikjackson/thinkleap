@@ -1,6 +1,6 @@
 // backend/src/config/index.ts
 import { DatabaseConfig, RedisConfig, Config } from './types';
-
+import jwt from 'jsonwebtoken';
 // Load environment variables with proper precedence
 function getEnvVar(key: string, defaultValue?: string): string {
   return process.env[key] || defaultValue || '';
@@ -24,7 +24,6 @@ const dbConfig: DatabaseConfig = {
   name: getEnvVar('DB_NAME', 'thinkleap'),
   user: getEnvVar('DB_USER', 'postgres'),
   password: getEnvVar('DB_PASSWORD', 'postgres'),
-  ssl: getEnvVarAsBoolean('DB_SSL', false),
   // Test database config
   test: {
     host: getEnvVar('TEST_DB_HOST', 'localhost'),
@@ -65,7 +64,6 @@ export const config: Config = {
 };
 
 // For backward compatibility
-export const config1 = config;
 
 // Export a function to get a specific environment's configuration
 export function getConfig(env = process.env.NODE_ENV): Config {

@@ -3,14 +3,15 @@ import { db } from '../../backend/src/services/database/connection';
 import { AuthService } from '../../backend/src/services/auth/auth.service';
 import { ValidationService } from '../../backend/src/services/validation/validation.service';
 import { DatabaseService } from '../../backend/src/services/database/database.service';
-import { config1 } from '../../backend/src/config';
+import { config } from '../../backend/src/config';
+import { Logger } from '../../backend/src/services/logger';
 
 const dbConfig = {
-  user: config1.db.user || process.env.DB_USER || 'postgres',
-  host: config1.db.host || process.env.DB_HOST || 'localhost',
-  database: config1.db.name || process.env.DB_NAME || 'thinkleap', // Use name from config1 or env
-  password: config1.db.password || process.env.DB_PASSWORD || 'postgres',
-  port: config1.db.port || parseInt(process.env.DB_PORT || '5432', 10),
+  user: config.db.user || process.env.DB_USER || 'postgres',
+  host: config.db.host || process.env.DB_HOST || 'localhost',
+  database: config.db.name || process.env.DB_NAME || 'thinkleap', // Use name from config1 or env
+  password: config.db.password || process.env.DB_PASSWORD || 'postgres',
+  port: config.db.port || parseInt(process.env.DB_PORT || '5432', 10),
   // Only use environment variable for SSL since config1.db.ssl does not exist
   ssl: process.env.DB_SSL === 'true'
 };
@@ -19,7 +20,8 @@ async function seedDevelopment() {
   try {
     // Create services
     const validationService = new ValidationService();
-    const databaseService = new DatabaseService(dbConfig);
+    const logger = new Logger();
+const databaseService = DatabaseService.getInstance(dbConfig, logger);
     const authService = new AuthService(validationService, databaseService);
     
     // Create test user

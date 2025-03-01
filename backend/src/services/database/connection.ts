@@ -1,6 +1,6 @@
 // backend/src/services/database/connection.ts
 import { Pool, PoolClient } from 'pg';
-import { config1 } from '../../config';
+import config from '../../config';
 
 class Database {
   private pool: Pool;
@@ -8,11 +8,11 @@ class Database {
 
   private constructor() {
     this.pool = new Pool({
-      user: config1.db.user,
-      host: config1.db.host,
-      database: config1.db.name,
-      password: config1.db.password,
-      port: config1.db.port,
+      user: config.db.user,
+      host: config.db.host,
+      database: config.db.name,
+      password: config.db.password,
+      port: config.db.port,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,

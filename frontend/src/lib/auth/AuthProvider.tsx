@@ -232,7 +232,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (email: string, password: string) => {
     try {
       setError(null);
-      const response = await fetch('API_ENDPOINTS.AUTH.LOGIN', {
+      const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -263,7 +263,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signup = async (email: string, password: string, fullName: string) => {
     try {
       setError(null);
-      const response = await fetch('API_ENDPOINTS.AUTH.SIGNUP', {
+      const response = await fetch(API_ENDPOINTS.AUTH.SIGNUP, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, fullName })
@@ -296,7 +296,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Get token from cookie instead of localStorage
       const refreshToken = getCookie('refreshToken');
       if (refreshToken) {
-        await fetch('/api/auth/logout', {
+        await fetch(API_ENDPOINTS.AUTH.LOGOUT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refreshToken })
@@ -309,7 +309,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       deleteCookie('refreshToken');
       setAccessToken(null);
       setUser(null);
-      router.push('/auth/login');
+      router.push(API_ENDPOINTS.AUTH.LOGIN);
     }
   };
 

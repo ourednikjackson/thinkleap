@@ -9,21 +9,18 @@ import { ValidationService } from '../services/validation/validation.service';
 import { PasswordResetService } from '../services/auth/password-reset.service';
 import { DatabaseService } from "../services/database/database.service";
 import { authLimiter, validateAuthInput, authenticateToken } from '../middleware/auth.middleware';
-import { config } from 'dotenv';
-import { config1 } from '../config';
+import { config } from '../config';
 import { authRateLimiter } from '@/middleware/extended-rate-limit.middleware';
 
 const router = Router();
 
 // Create a properly formatted database config
 const dbConfig = {
-  user: config1.db.user || process.env.DB_USER || 'postgres',
-  host: config1.db.host || process.env.DB_HOST || 'localhost',
-  database: config1.db.name || process.env.DB_NAME || 'thinkleap', // Use name from config1 or env
-  password: config1.db.password || process.env.DB_PASSWORD || 'postgres',
-  port: config1.db.port || parseInt(process.env.DB_PORT || '5432', 10),
-  // Only use environment variable for SSL since config1.db.ssl does not exist
-  ssl: process.env.DB_SSL === 'true'
+  user: config.db.user,
+  host: config.db.host,
+  database: config.db.name,
+  password: config.db.password,
+  port: config.db.port
 };
 
 // Initialize database service once to share among other services
@@ -57,17 +54,17 @@ const authController = new AuthController(
 router.use(authRateLimiter);
 
 // Routes
-router.post('/signup', validateAuthInput, async (req: Request<{}, {}, RegisterUserDTO>, res: Response<AuthResponse>) => {
-    await authController.signup(req, res);
+router.post('/signup', validateAuthInput, async (req: Request<{}, {}, RegisterUserDTO>, res: Response<AuthResponse>, next: NextFunction) => {
+  await authController.signup(req, res, next);
 });
 
-router.post('/login', validateAuthInput, (req, res) => authController.login(req, res));
+router.post('/login', validateAuthInput, (req, res, next) => authController.login(req, res, next));
 
-router.get('/verify-email/:token', (req, res) => authController.verifyEmail(req, res));
+router.get('/verify-email/:token', validateAuthInput, (req, res, next) => authController.verifyEmail(req, res, next));
 
-router.post('/refresh-token', (req, res) => authController.refreshToken(req, res));
+router.post('/refresh-token', validateAuthInput, (req, res, next) => authController.refreshToken(req, res, next));
 
-router.post('/logout', (req, res) => authController.logout(req, res,));
+router.post('/logout', validateAuthInput, (req, res, next) => authController.logout(req, res, next));
 
 // Password reset routes with fixed typing for arrow functions
 router.post('/forgot-password', (req: Request, res: Response, next: NextFunction) => {

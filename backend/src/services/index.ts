@@ -15,15 +15,14 @@ const dbConfig = {
   host: config.db.host,
   database: config.db.name,
   password: config.db.password,
-  port: config.db.port,
-  ssl: config.db.ssl
+  port: config.db.port
 };
 
 // Initialize services
 export function initServices() {
   logger = new Logger();
   cacheService = new CacheService(config.redis.url);
-  databaseService = new DatabaseService(dbConfig);
+  databaseService = DatabaseService.getInstance(dbConfig, logger);
   
   return { logger, cacheService, databaseService };
 }

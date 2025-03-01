@@ -33,4 +33,10 @@ export interface DatabaseConfig {
         key?: string;
       };
     };
+    jwt: {
+      secret: string;
+      refreshSecret: string;
+      accessTokenExpiry: string;
+      refreshTokenExpiry: string;
+    };
   }

@@ -8,14 +8,17 @@ import { SearchResult, SearchResponse } from '@thinkleap/shared/types/search';
 import { cn } from '@/lib/utils';
 import { ExportDialog } from './ExportDialog';
 import { SearchResultsSkeleton } from './SearchResultsSkeleton';
+import { useSearchParams } from 'next/navigation';
 
 interface SearchResultsProps {
   results: SearchResponse | null;
   isLoading: boolean;
   onPageChange: (page: number) => void;
+  filters?: Record<string, any>;
 }
 
-export function SearchResults({ results, isLoading, onPageChange }: SearchResultsProps) {
+export function SearchResults({ results, isLoading, onPageChange, filters = {} }: SearchResultsProps) {
+  const searchParams = useSearchParams();
   const { preferences } = usePreferences();
   const isDense = preferences.display.density === 'compact';
 
@@ -51,6 +54,8 @@ export function SearchResults({ results, isLoading, onPageChange }: SearchResult
         <ExportDialog 
           results={results.results}
           totalResults={results.totalResults}
+          searchQuery={searchParams.get('q') || ''} // Add the missing prop
+          searchFilters={filters} // Optionally add filters too
         />
       </div>
 
