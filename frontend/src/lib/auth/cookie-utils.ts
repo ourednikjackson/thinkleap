@@ -1,7 +1,10 @@
 // src/lib/auth/cookie-utils.ts
 export function setCookie(name: string, value: string, options: Record<string, any> = {}) {
+    if (typeof window === 'undefined') return; // Skip on server-side
+    
     const cookieOptions = {
       path: '/',
+      'max-age': 60 * 60 * 24 * 30, // 30 days by default
       ...options
     };
     
@@ -21,9 +24,12 @@ export function setCookie(name: string, value: string, options: Record<string, a
     });
     
     document.cookie = cookieString;
+    console.log(`Cookie set: ${name} (client-side)`);
   }
   
   export function getCookie(name: string): string | null {
+    if (typeof window === 'undefined') return null; // Skip on server-side
+    
     const cookies = document.cookie.split(';');
     for (let cookie of cookies) {
       const [cookieName, cookieValue] = cookie.trim().split('=');
@@ -35,6 +41,8 @@ export function setCookie(name: string, value: string, options: Record<string, a
   }
   
   export function deleteCookie(name: string, options: Record<string, any> = {}) {
+    if (typeof window === 'undefined') return; // Skip on server-side
+    
     const cookieOptions = {
       path: '/',
       ...options,

@@ -7,7 +7,8 @@ export class UserService {
 
     async findById(id: string): Promise<User | null> {
         const result = await this.databaseService.query(
-            `SELECT id, email, full_name, email_verified, status, created_at, updated_at 
+            `SELECT id, email, name as "fullName", email_verified as "emailVerified", 
+                   status, created_at as "createdAt", updated_at as "updatedAt" 
              FROM users 
              WHERE id = $1`,
             [id]
@@ -17,7 +18,8 @@ export class UserService {
 
     async findByEmail(email: string): Promise<User | null> {
         const result = await this.databaseService.query(
-            `SELECT id, email, full_name, email_verified, status, created_at, updated_at 
+            `SELECT id, email, name as "fullName", email_verified as "emailVerified", 
+                   status, created_at as "createdAt", updated_at as "updatedAt" 
              FROM users 
              WHERE email = $1`,
             [email]
@@ -29,12 +31,13 @@ export class UserService {
         const result = await this.databaseService.query(
             `UPDATE users 
              SET 
-                full_name = COALESCE($2, full_name),
+                name = COALESCE($2, name),
                 email = COALESCE($3, email),
                 status = COALESCE($4, status),
                 updated_at = CURRENT_TIMESTAMP
              WHERE id = $1
-             RETURNING id, email, full_name, email_verified, status, created_at, updated_at`,
+             RETURNING id, email, name as "fullName", email_verified as "emailVerified", 
+                       status, created_at as "createdAt", updated_at as "updatedAt"`,
             [id, data.fullName, data.email, data.status]
         );
         

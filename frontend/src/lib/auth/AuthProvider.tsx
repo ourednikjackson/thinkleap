@@ -8,8 +8,19 @@ import { User } from './types';
 import { setCookie, getCookie, deleteCookie } from './cookie-utils'; // We'll create this
 import { API_ENDPOINTS } from '@/config/api';
 
-console.log(`Attempting to fetch from: ${API_ENDPOINTS.AUTH.SIGNUP}`);
-console.log(`API base URL from environment: ${process.env.NEXT_PUBLIC_API_URL}`);
+// The backend API URL is configured from environment variables
+const API_BASE_URL = typeof window === 'undefined' 
+  ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'  // Server-side rendering
+  : window.location.origin.includes('localhost') 
+    ? 'http://localhost:3001'  // Local development
+    : '/api';  // Production/Docker - use relative path to avoid DNS issues
+
+console.log(`Using API base URL: ${API_BASE_URL}`);
+console.log(`Auth endpoints: Signup=${API_ENDPOINTS.AUTH.SIGNUP}`);
+
+// For debugging CORS issues
+console.log('Running in environment:', process.env.NODE_ENV);
+console.log('Full signup URL:', `${API_BASE_URL}${API_ENDPOINTS.AUTH.SIGNUP}`);
 
 // Add error translation function from AuthContext.tsx
 const translateError = (error: any) => {
@@ -109,8 +120,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Fetch user profile
   const fetchUserProfile = useCallback(async (token: string) => {
     try {
-      const response = await fetch('/api/users/profile', {
-        headers: { Authorization: `Bearer ${token}` }
+      console.log(`Fetching user profile from ${API_BASE_URL}${API_ENDPOINTS.USER.PROFILE}`);
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.USER.PROFILE}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+        mode: 'cors'
       });
       
       if (!response.ok) throw new Error('Failed to fetch user profile');
@@ -130,10 +144,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (!storedRefreshToken) return null;
 
     try {
-      const response = await fetch(API_ENDPOINTS.AUTH.REFRESH, {
+      console.log(`Sending refresh token request to ${API_BASE_URL}${API_ENDPOINTS.AUTH.REFRESH}`);
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.REFRESH}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: storedRefreshToken })
+        body: JSON.stringify({ refreshToken: storedRefreshToken }),
+        credentials: 'include',
+        mode: 'cors'
       });
 
       if (!response.ok) throw new Error('Token refresh failed');
@@ -143,14 +160,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       if (!parsedToken) throw new Error('Invalid token received');
 
-      // Store refresh token in cookie instead of localStorage
+      // Store refresh token in cookie
       setCookie('refreshToken', data.refreshToken, COOKIE_OPTIONS);
+      
+      // Also update the server-side cookie
+      await fetch('/api/auth/set-cookie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: data.refreshToken }),
+        credentials: 'include'
+      });
+      
       setAccessToken(parsedToken);
       return parsedToken;
     } catch (error) {
       console.error('Token refresh error:', error);
-      // Remove from cookie instead of localStorage
+      // Clear both client and server cookies
       deleteCookie('refreshToken');
+      await fetch('/api/auth/clear-cookie', {
+        method: 'POST',
+        credentials: 'include'
+      });
       setAccessToken(null);
       setUser(null);
       return null;
@@ -235,13 +265,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (email: string, password: string) => {
     try {
       setError(null);
-      const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
+      console.log(`Sending login request to ${API_BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`);
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
+        credentials: 'include',
+        mode: 'cors'
       });
 
       const data = await response.json();
+      console.log('Login response status:', response.status);
 
       if (!response.ok) {
         throw data.error || new Error('Invalid credentials');
@@ -250,11 +284,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const parsedToken = parseJwt(data.accessToken);
       if (!parsedToken) throw new Error('Invalid token received');
 
-      // Store refresh token in cookie instead of localStorage
+      // Store refresh token in cookie
       setCookie('refreshToken', data.refreshToken, COOKIE_OPTIONS);
+      
+      // Also set a server-readable cookie with fetch
+      await fetch('/api/auth/set-cookie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: data.refreshToken }),
+        credentials: 'include'
+      });
+      
       setAccessToken(parsedToken);
       setUser(data.user);
-      router.push('/dashboard');
+      
+      // Increase delay to ensure cookies are properly set before redirect
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
     } catch (error) {
       // Use the error translation function
       setError(translateError(error));
@@ -266,14 +313,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signup = async (email: string, password: string, fullName: string) => {
     try {
       setError(null);
-      const response = await fetch(API_ENDPOINTS.AUTH.SIGNUP, {
+      console.log(`Sending signup request to ${API_BASE_URL}${API_ENDPOINTS.AUTH.SIGNUP}`);
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.SIGNUP}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, fullName })
+        body: JSON.stringify({ email, password, fullName }),
+        credentials: 'include',
+        mode: 'cors'
       });
 
       const data = await response.json();
-
+      console.log('Signup response status:', response.status);
+      
       if (!response.ok) {
         throw data.error || new Error('Signup failed');
       }
@@ -281,11 +332,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const parsedToken = parseJwt(data.accessToken);
       if (!parsedToken) throw new Error('Invalid token received');
 
-      // Store refresh token in cookie instead of localStorage
+      // Store refresh token in cookie
       setCookie('refreshToken', data.refreshToken, COOKIE_OPTIONS);
+      
+      // Also set a server-readable cookie with fetch
+      await fetch('/api/auth/set-cookie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: data.refreshToken }),
+        credentials: 'include'
+      });
+      
       setAccessToken(parsedToken);
       setUser(data.user);
-      router.push('/dashboard');
+      
+      // Increase delay to ensure cookies are properly set before redirect
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
     } catch (error) {
       // Use the error translation function
       setError(translateError(error));
@@ -299,20 +363,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Get token from cookie instead of localStorage
       const refreshToken = getCookie('refreshToken');
       if (refreshToken) {
-        await fetch(API_ENDPOINTS.AUTH.LOGOUT, {
+        console.log(`Sending logout request to ${API_BASE_URL}${API_ENDPOINTS.AUTH.LOGOUT}`);
+        await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.LOGOUT}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken })
+          body: JSON.stringify({ refreshToken }),
+          credentials: 'include',
+          mode: 'cors'
         });
       }
+      
+      // Clear the server-side cookie
+      await fetch('/api/auth/clear-cookie', {
+        method: 'POST',
+        credentials: 'include'
+      });
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // Remove from cookie instead of localStorage
+      // Remove client-side cookie
       deleteCookie('refreshToken');
       setAccessToken(null);
       setUser(null);
-      router.push(API_ENDPOINTS.AUTH.LOGIN);
+      router.push('/auth/login');
     }
   };
 

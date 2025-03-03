@@ -200,10 +200,11 @@ export class DatabaseService {
   }
 
   async createUser(userData: { email: string; password: string; fullName: string }) {
+    // Generate a UUID directly in PostgreSQL
     const result = await this.query(
-      `INSERT INTO users (email, password_hash, full_name)
-       VALUES ($1, $2, $3)
-       RETURNING id, email, full_name`,
+      `INSERT INTO users (id, email, password_hash, name)
+       VALUES (gen_random_uuid(), $1, $2, $3)
+       RETURNING id, email, name as "fullName"`,
       [userData.email, userData.password, userData.fullName]
     );
     return result.rows[0];

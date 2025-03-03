@@ -2,13 +2,13 @@
 export const API_ENDPOINTS = {
     // Auth endpoints
     AUTH: {
-      BASE: '/auth',
-      LOGIN: '/auth/login',
-      SIGNUP: '/auth/signup',
-      REFRESH: 'auth/refresh-token',
-      LOGOUT: 'auth/logout',
-      FORGOT_PASSWORD: 'auth/forgot-password',
-      RESET_PASSWORD: 'auth/reset-password',
+      BASE: '/api/auth',
+      LOGIN: '/api/auth/login',
+      SIGNUP: '/api/auth/signup',
+      REFRESH: '/api/auth/refresh-token',
+      LOGOUT: '/api/auth/logout',
+      FORGOT_PASSWORD: '/api/auth/forgot-password',
+      RESET_PASSWORD: '/api/auth/reset-password',
     },
     
     // User endpoints
