@@ -8,6 +8,9 @@ import { User } from './types';
 import { setCookie, getCookie, deleteCookie } from './cookie-utils'; // We'll create this
 import { API_ENDPOINTS } from '@/config/api';
 
+console.log(`Attempting to fetch from: ${API_ENDPOINTS.AUTH.SIGNUP}`);
+console.log(`API base URL from environment: ${process.env.NEXT_PUBLIC_API_URL}`);
+
 // Add error translation function from AuthContext.tsx
 const translateError = (error: any) => {
   if (error?.type === 'VALIDATION') {
@@ -127,7 +130,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (!storedRefreshToken) return null;
 
     try {
-      const response = await fetch('/api/auth/refresh-token', {
+      const response = await fetch(API_ENDPOINTS.AUTH.REFRESH, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken: storedRefreshToken })

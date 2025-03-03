@@ -3,27 +3,27 @@ version: '3.8'
 services:
   frontend:
     build:
-      context: /home/straw/thinkleap/frontend
-      dockerfile: /home/straw/thinkleap/docker/dev/frontend/Dockerfile
+      context: ${PROJECT_ROOT}/frontend
+      dockerfile: ${PROJECT_ROOT}/docker/dev/frontend/Dockerfile
     volumes:
-      - ../../frontend:/app
+      - ${PROJECT_ROOT}/frontend:/app
       - /app/node_modules
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:4000
+      - NEXT_PUBLIC_API_URL=http://backend:4000
     depends_on:
       - backend
 
   backend:
     build:
-      context: /home/straw/thinkleap/backend
-      dockerfile: /home/straw/thinkleap/docker/dev/backend/Dockerfile
+      context: ${PROJECT_ROOT}/backend
+      dockerfile: ${PROJECT_ROOT}/docker/dev/backend/Dockerfile
     volumes:
-      - ../../backend:/app
+      - ${PROJECT_ROOT}/backend:/app
       - /app/node_modules
-      - ../../shared:/shared
+      - ${PROJECT_ROOT}/shared:/shared
     ports:
       - "4000:4000"
     environment:
@@ -39,10 +39,12 @@ services:
       - redis
 
   redis:
+    image: redis:alpine
     ports:
       - "6380:6379"
 
   db:
+    image: postgres:14-alpine
     ports:
       - "5432:5432"
     environment:

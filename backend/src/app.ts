@@ -66,6 +66,10 @@ export class App {
   }
 
   private setupRoutes(): void {
+    this.app.use((req, res, next) => {
+      console.log(`Backend received: ${req.method} ${req.path}`);
+      next();
+    });
     this.app.get('/health', (_req: Request, res: Response) => {
       res.json({ status: 'healthy' });
     });
