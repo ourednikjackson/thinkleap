@@ -11,7 +11,7 @@ import { SearchResultsSkeleton } from './SearchResultsSkeleton';
 import { useSearchParams } from 'next/navigation';
 
 interface SearchResultsProps {
-  results: SearchResponse | null;
+  results: {data: SearchResponse} | null;
   isLoading: boolean;
   onPageChange: (page: number) => void;
   filters?: Record<string, any>;
@@ -34,7 +34,7 @@ export function SearchResults({ results, isLoading, onPageChange, filters = {} }
     }
   
     // Early return for no results
-    if (!results || !results.results || results.results.length === 0) {
+    if (!results || !results.data || !results.data.results || results.data.results.length === 0) {
       return (
         <Card className={cn(
           "text-center text-gray-500",
@@ -49,18 +49,18 @@ export function SearchResults({ results, isLoading, onPageChange, filters = {} }
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="text-sm text-gray-500">
-          Showing {results.results.length} of {results.totalResults} results
+          Showing {results.data.results.length} of {results.data.totalResults} results
         </div>
         <ExportDialog 
-          results={results.results}
-          totalResults={results.totalResults}
+          results={results.data.results}
+          totalResults={results.data.totalResults}
           searchQuery={searchParams.get('q') || ''} // Add the missing prop
           searchFilters={filters} // Optionally add filters too
         />
       </div>
 
       <div className="space-y-4">
-        {results.results.map((result) => (
+        {results.data.results.map((result) => (
           <Card 
             key={result.id} 
             className={cn(
@@ -117,7 +117,7 @@ export function SearchResults({ results, isLoading, onPageChange, filters = {} }
               {result.publicationDate && (
                 <span className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  {result.publicationDate.toLocaleDateString()}
+                  {new Date(result.publicationDate).toLocaleDateString()}
                 </span>
               )}
               
@@ -168,8 +168,8 @@ export function SearchResults({ results, isLoading, onPageChange, filters = {} }
       </div>
 
       <Pagination
-        currentPage={results.page}
-        totalPages={results.totalPages}
+        currentPage={results.data.page}
+        totalPages={results.data.totalPages}
         onPageChange={onPageChange}
       />
     </div>

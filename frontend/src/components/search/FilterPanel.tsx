@@ -90,7 +90,7 @@ export function FilterPanel({ filters, onFiltersChange }: FilterPanelProps) {
                     placeholder="Add author..."
                     value={author}
                     onChange={(e) => setAuthor(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && addAuthor()}
+                    onKeyDown={(e) => e.key === 'Enter' && addAuthor()}
                   />
                   <Button onClick={addAuthor} variant="secondary">Add</Button>
                 </div>
@@ -119,7 +119,7 @@ export function FilterPanel({ filters, onFiltersChange }: FilterPanelProps) {
                     placeholder="Add journal..."
                     value={journal}
                     onChange={(e) => setJournal(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && addJournal()}
+                    onKeyDown={(e) => e.key === 'Enter' && addJournal()}
                   />
                   <Button onClick={addJournal} variant="secondary">Add</Button>
                 </div>

@@ -1,6 +1,47 @@
 'use client';
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { UserPreferences, DEFAULT_PREFERENCES } from '@thinkleap/shared/types/user-preferences';
+// Define preferences types locally since the shared package import is failing
+export interface UserPreferences {
+  search: {
+    resultsPerPage: number;
+    defaultSortOrder: 'relevance' | 'date' | 'citations';
+    defaultFilters?: {
+      dateRange?: 'all' | 'year' | 'month' | 'week';
+      documentTypes?: string[];
+      languages?: string[];
+    };
+  };
+  display: {
+    theme: 'light' | 'dark' | 'system';
+    density: 'comfortable' | 'compact';
+  };
+  notifications: {
+    emailAlerts: boolean;
+    searchUpdates: boolean;
+    newFeatures: boolean;
+  };
+}
+
+export const DEFAULT_PREFERENCES: UserPreferences = {
+  search: {
+    resultsPerPage: 10,
+    defaultSortOrder: 'relevance',
+    defaultFilters: {
+      dateRange: 'all',
+      documentTypes: [],
+      languages: ['en']
+    }
+  },
+  display: {
+    theme: 'system',
+    density: 'comfortable'
+  },
+  notifications: {
+    emailAlerts: true,
+    searchUpdates: true,
+    newFeatures: true
+  }
+};
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -16,7 +57,7 @@ const PreferencesContext = createContext<PreferencesContextType | undefined>(und
 export function PreferencesProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const loadPreferences = useCallback(async () => {
     try {

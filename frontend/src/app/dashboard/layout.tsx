@@ -22,6 +22,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               Overview
             </Link>
             <Link 
+              href={routes.search}
+              className="block p-2 rounded-md hover:bg-gray-100"
+            >
+              Search
+            </Link>
+            <Link 
+              href={routes.savedSearches}
+              className="block p-2 rounded-md hover:bg-gray-100"
+            >
+              Saved Searches
+            </Link>
+            <Link 
               href={routes.projects}
               className="block p-2 rounded-md hover:bg-gray-100"
             >
@@ -31,7 +43,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               href={routes.profile}
               className="block p-2 rounded-md hover:bg-gray-100"
             >
-              Settings
+              Profile
             </Link>
           </nav>
         </div>

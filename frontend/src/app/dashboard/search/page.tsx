@@ -1,8 +1,6 @@
-// frontend/src/app/(protected)/search/page.tsx
-
 'use client';
 import { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { usePreferences } from '@/lib/preferences/PreferencesContext';
 import { SearchForm } from '@/components/search/SearchForm';
@@ -15,26 +13,34 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 export default function SearchPage() {
   const { user } = useAuth();
   const { preferences } = usePreferences();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<{data: SearchResponse} | null>(null);
 
   // Initialize filters with empty arrays for authors and journals
+  // Initialize with defaults and update after preferences load
   const [filters, setFilters] = useState<SearchFilters>({
     dateRange: undefined,
     authors: [],
     journals: [],
-    articleTypes: preferences.search.defaultFilters?.documentTypes,
-    languages: preferences.search.defaultFilters?.languages
+    articleTypes: [],
+    languages: ['en']
   });
-
+  
+  // Update filters when preferences change
   useEffect(() => {
-    if (!user) {
-      router.push('/auth/login?redirect=/dashboard/search');
+    if (preferences) {
+      setFilters(prev => ({
+        ...prev,
+        articleTypes: preferences.search.defaultFilters?.documentTypes || [],
+        languages: preferences.search.defaultFilters?.languages || ['en']
+      }));
     }
-  }, [user, router]);
+  }, [preferences]);
+
+  // Authentication check is handled by middleware
+  // No need to redirect here as it causes loops
 
   const handleSearch = async (query: string, page = 1) => {
     if (!query || query.trim() === '') return;
@@ -46,8 +52,8 @@ export default function SearchPage() {
       const queryParams = new URLSearchParams({
         q: query,
         page: page.toString(),
-        limit: preferences.search.resultsPerPage.toString(),
-        sortBy: preferences.search.defaultSortOrder,
+        limit: (preferences.search.resultsPerPage || 10).toString(),
+        sortBy: preferences.search.defaultSortOrder || 'relevance',
         filters: JSON.stringify(filters)
       });
       
@@ -79,15 +85,6 @@ export default function SearchPage() {
     }
   };
 
-  // Determine if error is a network issue
-  const isNetworkError = error && (
-    error.includes('fetch failed') || 
-    error.includes('network') || 
-    error.includes('EAI_AGAIN') || 
-    error.includes('ECONNREFUSED') ||
-    error.includes('timeout')
-  );
-
   return (
     <div className="container max-w-7xl mx-auto py-6 space-y-6">
       <Card className="p-6">
@@ -105,17 +102,8 @@ export default function SearchPage() {
       </Card>
 
       {error && (
-        <Alert variant={isNetworkError ? "warning" : "destructive"}>
-          <AlertDescription>
-            {isNetworkError ? (
-              <>
-                <strong>Network issue detected:</strong> There was a problem connecting to the PubMed database. 
-                This may be due to temporary connectivity issues. Please try again in a few moments.
-              </>
-            ) : (
-              error
-            )}
-          </AlertDescription>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
@@ -125,7 +113,6 @@ export default function SearchPage() {
         onPageChange={(page) => {
           handleSearch(searchParams.get('q') || '', page);
         }}
-        filters={filters}
       />
     </div>
   );

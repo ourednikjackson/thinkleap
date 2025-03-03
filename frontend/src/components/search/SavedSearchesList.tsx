@@ -23,7 +23,7 @@ interface SavedSearchesListProps {
 
 export function SavedSearchesList({ sortBy }: SavedSearchesListProps) {
   const router = useRouter();
-  const [searches, setSearches] = useState<SavedSearch[]>([]);
+  const [searches, setSearches] = useState<SavedSearch[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -116,7 +116,7 @@ export function SavedSearchesList({ sortBy }: SavedSearchesListProps) {
 
   return (
     <div className="space-y-6">
-      {searches.length === 0 ? (
+      {!searches || searches.length === 0 ? (
         <Card className="p-6 text-center text-gray-500">
           No saved searches yet
         </Card>

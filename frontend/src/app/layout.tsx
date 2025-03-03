@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { AuthProvider } from '@/lib/auth';
+import { PreferencesProvider } from '@/lib/preferences/PreferencesContext';
 import { MainNav } from '@/components/layout/MainNav';
 import { Toaster } from "@/components/ui/sonner";
 import './globals.css';
@@ -18,13 +19,15 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="en">
       <body>
         <AuthProvider>
-          <div className="min-h-screen flex flex-col">
-            <MainNav />
-            <div className="flex-1">
-              {children}
+          <PreferencesProvider>
+            <div className="min-h-screen flex flex-col">
+              <MainNav />
+              <div className="flex-1">
+                {children}
+              </div>
             </div>
-          </div>
-          <Toaster />
+            <Toaster />
+          </PreferencesProvider>
         </AuthProvider>
       </body>
     </html>
