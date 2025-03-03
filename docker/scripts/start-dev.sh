@@ -1,2 +1,8 @@
 #!/bin/bash
-docker compose -f docker/docker-compose.base.yml -f docker/dev/docker-compose.yml up --build
+# Navigate to project root
+PROJECT_ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+
+# Use absolute paths
+docker compose -f "$PROJECT_ROOT/docker/docker-compose.base.yml" \
+               -f "$PROJECT_ROOT/docker/dev/docker-compose.yml" \
+               up --build

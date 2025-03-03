@@ -3,8 +3,8 @@ version: '3.8'
 services:
   frontend:
     build:
-      context: ../../frontend
-      dockerfile: ../docker/dev/frontend/Dockerfile
+      context: /home/straw/thinkleap/frontend
+      dockerfile: /home/straw/thinkleap/docker/dev/frontend/Dockerfile
     volumes:
       - ../../frontend:/app
       - /app/node_modules
@@ -18,11 +18,12 @@ services:
 
   backend:
     build:
-      context: ../../backend
-      dockerfile: ../docker/dev/backend/Dockerfile
+      context: /home/straw/thinkleap/backend
+      dockerfile: /home/straw/thinkleap/docker/dev/backend/Dockerfile
     volumes:
       - ../../backend:/app
       - /app/node_modules
+      - ../../shared:/shared
     ports:
       - "4000:4000"
     environment:

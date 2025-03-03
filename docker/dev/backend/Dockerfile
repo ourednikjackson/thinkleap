@@ -1,3 +1,4 @@
+## backend/Dockerfile
 FROM node:18-alpine
 
 WORKDIR /app
@@ -15,4 +16,4 @@ COPY . .
 EXPOSE 4000
 
 # Start development server
-CMD ["npm", "run", "dev"]
+CMD ["sh", "-c", "npm install && npm run dev"]

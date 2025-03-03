@@ -1,3 +1,4 @@
+
 FROM postgres:14-alpine
 
 # Add health check

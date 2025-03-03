@@ -14,7 +14,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@thinkleap/shared": "1.0.0",
+    "@thinkleap/shared": "file:/shared",
     "@types/compression": "^1.7.5",
     "bcrypt": "^5.1.1",
     "compression": "^1.8.0",
