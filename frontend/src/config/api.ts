@@ -1,48 +1,60 @@
-// frontend/src/config/api.ts
+// API configuration
+export const api = {
+  // Base URL for backend API
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
+  
+  // External APIs
+  pubmed: {
+    // PubMed E-utilities API
+    baseUrl: 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils',
+    key: process.env.PUBMED_API_KEY,
+    
+    // PubMed E-utilities endpoints
+    endpoints: {
+      search: '/esearch.fcgi',
+      summary: '/esummary.fcgi',
+      fetch: '/efetch.fcgi'
+    },
+    
+    // Default parameters
+    defaults: {
+      db: 'pubmed',
+      retmode: 'json',
+      sort: 'relevance',
+      usehistory: 'y'
+    },
+    
+    // Rate limits
+    rateLimits: {
+      withKey: 10, // 10 requests/second with API key
+      withoutKey: 3 // 3 requests/second without API key
+    }
+  }
+};
+
+// API endpoints for the application
 export const API_ENDPOINTS = {
-    // Auth endpoints
-    AUTH: {
-      BASE: '/api/auth',
-      LOGIN: '/api/auth/login',
-      SIGNUP: '/api/auth/signup',
-      REFRESH: '/api/auth/refresh-token',
-      LOGOUT: '/api/auth/logout',
-      FORGOT_PASSWORD: '/api/auth/forgot-password',
-      RESET_PASSWORD: '/api/auth/reset-password',
-    },
-    
-    // User endpoints
-    USER: {
-      BASE: '/api/users',
-      PROFILE: '/api/users/profile',
-      ACCOUNT: '/api/users/account',
-      ACTIVITY: '/api/users/activity',
-      INSTITUTION: {
-        VERIFY_REQUEST: '/api/users/institution/verify-request',
-        VERIFY_CODE: '/api/users/institution/verify-code',
-        STATUS: '/api/users/institution/status',
-      },
-    },
-    
-    // Search endpoints
-    SEARCH: {
-      BASE: '/api/search',
-      EXECUTE: '/api/search',
-    },
-    
-    // Saved searches endpoints
-    SAVED_SEARCHES: {
-      BASE: '/api/saved-searches',
-      GET_ALL: '/api/saved-searches',
-      EXECUTE: (id: string) => `/api/saved-searches/${id}/execute`,
-      DELETE: (id: string) => `/api/saved-searches/${id}`,
-    },
-    
-    // Preferences endpoints
-    PREFERENCES: {
-      BASE: '/api/preferences',
-      GET: '/api/preferences',
-      UPDATE: '/api/preferences',
-      RESET: '/api/preferences/reset',
-    },
-  };
+  AUTH: {
+    LOGIN: '/auth/login',
+    SIGNUP: '/auth/signup',
+    LOGOUT: '/auth/logout',
+    REFRESH: '/auth/refresh',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    RESET_PASSWORD: '/auth/reset-password'
+  },
+  USER: {
+    PROFILE: '/user/profile',
+    UPDATE: '/user/update'
+  },
+  SEARCH: {
+    QUERY: '/search',
+    SAVE: '/saved-searches',
+    GET_SAVED: '/saved-searches',
+    EXECUTE_SAVED: '/saved-searches/execute'
+  },
+  PREFERENCES: {
+    GET: '/preferences',
+    UPDATE: '/preferences',
+    RESET: '/preferences/reset'
+  }
+};

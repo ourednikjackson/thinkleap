@@ -30,19 +30,26 @@ interface PubMedArticle {
   abstract?: string;
 }
 
+// Import API configuration
+import { api } from '@/config/api';
+
 // PubMed API endpoints
-// Since the proxy doesn't work in a server environment, we'll use direct PubMed API access
-const USE_DIRECT_PUBMED = true; // Force direct PubMed API calls to avoid proxy issues
+const PUBMED_CONFIG = api.pubmed;
 
-// Direct PubMed API endpoints - these are absolute URLs
-const DIRECT_PUBMED_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
-const DIRECT_SEARCH_ENDPOINT = `${DIRECT_PUBMED_BASE}/esearch.fcgi`;
-const DIRECT_SUMMARY_ENDPOINT = `${DIRECT_PUBMED_BASE}/esummary.fcgi`;
-const DIRECT_FETCH_ENDPOINT = `${DIRECT_PUBMED_BASE}/efetch.fcgi`;
+// API endpoints
+const DIRECT_PUBMED_BASE = PUBMED_CONFIG.baseUrl;
+const DIRECT_SEARCH_ENDPOINT = `${DIRECT_PUBMED_BASE}${PUBMED_CONFIG.endpoints.search}`;
+const DIRECT_SUMMARY_ENDPOINT = `${DIRECT_PUBMED_BASE}${PUBMED_CONFIG.endpoints.summary}`;
+const DIRECT_FETCH_ENDPOINT = `${DIRECT_PUBMED_BASE}${PUBMED_CONFIG.endpoints.fetch}`;
 
-// Optional API key - can be added in environment variables for higher rate limits
-// When no API key is provided, use 'guest' mode with limited rate
-const API_KEY = process.env.PUBMED_API_KEY || 'guest';
+// Get API key from config
+const API_KEY = PUBMED_CONFIG.key;
+
+// Log API configuration
+console.log(`PubMed API configuration loaded`);
+console.log(`Base URL: ${DIRECT_PUBMED_BASE}`);
+console.log(`API key present: ${API_KEY ? 'Yes' : 'No'}`);
+console.log(`Rate limit: ${API_KEY ? PUBMED_CONFIG.rateLimits.withKey : PUBMED_CONFIG.rateLimits.withoutKey} requests/second`);
 
 /**
  * Search PubMed for articles matching the query
@@ -219,9 +226,12 @@ async function getPubMedIds(query: string, page: number, limit: number, filters:
       usehistory: 'y'  // Use history to improve performance for subsequent requests
     });
     
-    // Add API key for higher rate limits
-    if (API_KEY && API_KEY !== 'guest') {
+    // Add API key if available - increases rate limits from 3 to 10 requests per second
+    if (API_KEY) {
       params.append('api_key', API_KEY);
+      console.log('Using PubMed API key for request');
+    } else {
+      console.log('No API key for request - using default rate limits');
     }
     
     // We're using direct PubMed API access to avoid proxy issues in server context
@@ -237,8 +247,13 @@ async function getPubMedIds(query: string, page: number, limit: number, filters:
       try {
         console.log(`Attempt ${attempt} to connect to PubMed API...`);
         response = await fetch(url, {
-          // Add timeout to avoid hanging requests
-          signal: AbortSignal.timeout(10000)
+          // Add timeout to avoid hanging requests (15 seconds)
+          signal: AbortSignal.timeout(15000),
+          // Add headers to help with troubleshooting
+          headers: {
+            'User-Agent': 'ThinkLeap/1.0 (https://thinkleap.com; support@thinkleap.com)',
+            'Accept': 'application/json'
+          }
         });
         
         if (!response.ok) {
@@ -300,8 +315,12 @@ async function getArticleDetails(pmids: string[]): Promise<PubMedArticle[]> {
       retmode: 'json'
     });
     
+    // Add API key if available
     if (API_KEY) {
       params.append('api_key', API_KEY);
+      console.log('Using PubMed API key for summary request');
+    } else {
+      console.log('No API key for summary request - using default rate limits');
     }
     
     // We're using direct PubMed API access to avoid proxy issues in server context
@@ -319,8 +338,13 @@ async function getArticleDetails(pmids: string[]): Promise<PubMedArticle[]> {
       try {
         console.log(`Attempt ${attempt} to fetch article details...`);
         response = await fetch(url, {
-          // Add timeout to avoid hanging requests
-          signal: AbortSignal.timeout(15000)
+          // Add timeout to avoid hanging requests (15 seconds)
+          signal: AbortSignal.timeout(15000),
+          // Add headers to help with troubleshooting
+          headers: {
+            'User-Agent': 'ThinkLeap/1.0 (https://thinkleap.com; support@thinkleap.com)',
+            'Accept': 'application/json'
+          }
         });
         
         if (!response.ok) {
@@ -402,8 +426,12 @@ async function addAbstracts(articles: PubMedArticle[]): Promise<PubMedArticle[]>
         rettype: 'abstract'
       });
       
-      if (API_KEY && API_KEY !== 'guest') {
+      // Add API key if available
+      if (API_KEY) {
         params.append('api_key', API_KEY);
+        console.log('Using PubMed API key for abstract request');
+      } else {
+        console.log('No API key for abstract request - using default rate limits');
       }
       
       // We're using direct PubMed API access to avoid proxy issues in server context
@@ -421,8 +449,13 @@ async function addAbstracts(articles: PubMedArticle[]): Promise<PubMedArticle[]>
         try {
           console.log(`Attempt ${attempt} to fetch abstracts...`);
           response = await fetch(url, {
-            // Add timeout to avoid hanging requests
-            signal: AbortSignal.timeout(15000)
+            // Add timeout to avoid hanging requests (15 seconds)
+            signal: AbortSignal.timeout(15000),
+            // Add headers to help with troubleshooting
+            headers: {
+              'User-Agent': 'ThinkLeap/1.0 (https://thinkleap.com; support@thinkleap.com)',
+              'Accept': 'text/xml, application/xml'
+            }
           });
           
           if (!response.ok) {

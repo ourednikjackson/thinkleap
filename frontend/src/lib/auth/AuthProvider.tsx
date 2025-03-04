@@ -6,7 +6,29 @@ import { useRouter } from 'next/navigation';
 import { AuthContext } from './context';
 import { User } from './types';
 import { setCookie, getCookie, deleteCookie } from './cookie-utils'; // We'll create this
-import { API_ENDPOINTS } from '@/config/api';
+import { api } from '@/config/api';
+
+// Define API endpoints locally to avoid import issues
+const API_ENDPOINTS = {
+  AUTH: {
+    LOGIN: '/auth/login',
+    SIGNUP: '/auth/signup',
+    LOGOUT: '/auth/logout',
+    REFRESH: '/auth/refresh',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    RESET_PASSWORD: '/auth/reset-password'
+  },
+  USER: {
+    PROFILE: '/user/profile',
+    UPDATE: '/user/update'
+  },
+  SEARCH: {
+    QUERY: '/search',
+    SAVE: '/saved-searches',
+    GET_SAVED: '/saved-searches',
+    EXECUTE_SAVED: '/saved-searches/execute'
+  }
+};
 
 // The backend API URL is configured from environment variables
 const API_BASE_URL = typeof window === 'undefined' 
