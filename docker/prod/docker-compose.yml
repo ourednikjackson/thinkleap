@@ -3,64 +3,53 @@ version: '3.8'
 services:
   frontend:
     build:
-      context: ../../frontend
-      dockerfile: ../docker/prod/frontend/Dockerfile
+      context: ${PROJECT_ROOT}/frontend
+      dockerfile: ${PROJECT_ROOT}/docker/prod/frontend/Dockerfile
+    volumes:
+      - ${PROJECT_ROOT}/frontend:/app
+      - /app/node_modules
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://api.thinkleap.org
-    restart: unless-stopped
+      - NEXT_PUBLIC_API_URL=http://backend:3001
     depends_on:
       - backend
-    networks:
-      - thinkleap-network
 
   backend:
     build:
-      context: ../../backend
-      dockerfile: ../docker/prod/backend/Dockerfile
+      context: ${PROJECT_ROOT}/backend
+      dockerfile: ${PROJECT_ROOT}/docker/prod/backend/Dockerfile
+    volumes:
+      - ${PROJECT_ROOT}/backend:/app
+      - /app/node_modules
+      - ${PROJECT_ROOT}/shared:/shared
     ports:
-      - "4000:4000"
+      - "3001:3001"
     environment:
       - NODE_ENV=production
       - DB_HOST=db
       - DB_PORT=5432
       - DB_NAME=thinkleap
       - DB_USER=postgres
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=postgres
       - REDIS_URL=redis://redis:6379
-    restart: unless-stopped
+      # In Docker environment, use wildcard to accept connections from any origin during development
+      - CORS_ORIGIN=*
     depends_on:
       - db
       - redis
-    networks:
-      - thinkleap-network
 
   redis:
     image: redis:alpine
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
-    networks:
-      - thinkleap-network
+    ports:
+      - "6380:6379"
 
   db:
     image: postgres:14-alpine
+    ports:
+      - "5432:5432"
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=thinkleap
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-    networks:
-      - thinkleap-network
-
-volumes:
-  postgres_data:
-  redis_data:
-
-networks:
-  thinkleap-network:
-    driver: bridge

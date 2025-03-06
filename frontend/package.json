@@ -38,7 +38,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@testing-library/cypress": "^10.0.3",
-    "@types/node": "^20",
+    "@types/node": "20.17.23",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "cypress": "^14.1.0",
@@ -50,6 +50,6 @@
     "start-server-and-test": "^2.0.10",
     "tailwindcss": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "^5"
+    "typescript": "5.8.2"
   }
 }

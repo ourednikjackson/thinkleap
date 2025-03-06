@@ -1,2 +1,13 @@
 #!/bin/bash
-docker compose -f docker/docker-compose.base.yml -f docker/prod/docker-compose.yml up --build -d
+# Navigate to project root
+export PROJECT_ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+
+echo "Using project root: $PROJECT_ROOT"
+
+# Use absolute paths
+docker compose -f "$PROJECT_ROOT/docker/docker-compose.base.yml" \
+               -f "$PROJECT_ROOT/docker/prod/docker-compose.yml" \
+               up --build
+EOF
+
+chmod +x docker/scripts/start-prod.sh
