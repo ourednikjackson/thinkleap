@@ -8,6 +8,3 @@ echo "Using project root: $PROJECT_ROOT"
 docker compose -f "$PROJECT_ROOT/docker/docker-compose.base.yml" \
                -f "$PROJECT_ROOT/docker/dev/docker-compose.yml" \
                up --build
-EOF
-
-chmod +x docker/scripts/start-dev.sh

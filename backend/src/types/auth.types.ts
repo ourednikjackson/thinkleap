@@ -1,7 +1,10 @@
 import { Request } from 'express';
+import { Profile } from 'passport-saml';
 
 export interface AuthenticatedUser {
     userId: string;  // Changed from id to userId to match middleware
+    institutionId?: string;  // Added for SAML authentication
+    authType: 'jwt' | 'saml'; // Type of authentication used
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -18,13 +21,16 @@ export interface AuthResponse {
     success: boolean;
     message?: string;
     error?: AuthError;
-    accessToken?: string;    // Add this
-    refreshToken?: string;   // Add this
+    accessToken?: string;    
+    refreshToken?: string;   
+    samlSession?: boolean;    // Indicates if user is authenticated via SAML
+    institutionId?: string;   // Added for SAML authentication
     user?: {
         id: string;
         email: string;
         fullName: string;
         emailVerified: boolean;
+        institutionId?: string; // Added for SAML authentication
     };
 }
 
@@ -40,7 +46,8 @@ export function createAuthError(type: AuthErrorType, message: string): AuthError
 export enum AuthErrorType {
     VALIDATION = 'VALIDATION',
     DUPLICATE = 'DUPLICATE',
-    SERVER = 'SERVER'
+    SERVER = 'SERVER',
+    SAML_ERROR = 'SAML_ERROR'
 }
 
 export interface AuthError {
@@ -56,4 +63,54 @@ export interface LoginUserDTO {
 
 export interface RefreshTokenDTO {
     refreshToken: string;
+}
+
+// SAML specific types
+export interface SamlUser {
+    nameID: string;
+    nameIDFormat: string;
+    sessionIndex?: string;
+    attributes: any;
+    institutionId: string;
+    userId?: string; // Linked user ID if exists
+}
+
+export interface SamlConfig {
+    entryPoint: string;
+    issuer: string;
+    cert: string;
+    identifierFormat?: string;
+    signatureAlgorithm?: string;
+    validateInResponseTo?: boolean;
+    disableRequestedAuthnContext?: boolean;
+    acceptedClockSkewMs?: number;
+    logoutUrl?: string;
+}
+
+export interface SamlAuthDTO {
+    SAMLResponse: string;
+    RelayState?: string;
+}
+
+export interface SamlProfileMapping {
+    nameID: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    displayName?: string;
+    affiliation?: string;
+}
+
+export interface SamlMetadata {
+    entityID: string;
+    contactPerson: {
+        technical: {
+            emailAddress: string;
+            givenName: string;
+        };
+    };
+    endpoints: {
+        singleSignOnService: { url: string, binding: string }[];
+        singleLogoutService?: { url: string, binding: string }[];
+    };
 }

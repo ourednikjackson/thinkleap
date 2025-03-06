@@ -37,6 +37,7 @@ const dbConfig: DatabaseConfig = {
 // Build the Redis config
 const redisConfig: RedisConfig = {
   url: getEnvVar('REDIS_URL', 'redis://localhost:6379'),
+  host: getEnvVar('REDIS_HOST', 'localhost'),
   port: getEnvVarAsNumber('REDIS_PORT', 6379),
   password: getEnvVar('REDIS_PASSWORD', undefined)
 };
@@ -53,6 +54,9 @@ export const config: Config = {
   api: {
     pubmed: {
       key: getEnvVar('PUBMED_API_KEY')
+    },
+    crossref: {
+      email: getEnvVar('CROSSREF_EMAIL', 'support@thinkleap.io')
     }
   },
   jwt: {
@@ -60,6 +64,27 @@ export const config: Config = {
     refreshSecret: getEnvVar('JWT_REFRESH_SECRET', 'your-jwt-refresh-secret-do-not-use-in-production'),
     accessTokenExpiry: getEnvVar('JWT_ACCESS_TOKEN_EXPIRY', '15m'),
     refreshTokenExpiry: getEnvVar('JWT_REFRESH_TOKEN_EXPIRY', '7d')
+  },
+  session: {
+    secret: getEnvVar('SESSION_SECRET', 'your-session-secret-do-not-use-in-production'),
+    maxAge: getEnvVarAsNumber('SESSION_MAX_AGE', 24 * 60 * 60 * 1000) // 24 hours default
+  },
+  saml: {
+    issuer: getEnvVar('SAML_ISSUER', 'thinkleap'),
+    callbackUrl: getEnvVar('SAML_CALLBACK_URL', '/api/auth/saml/callback'),
+    logoutUrl: getEnvVar('SAML_LOGOUT_URL', '/api/auth/saml/logout/callback'),
+    technicalContact: getEnvVar('SAML_TECHNICAL_CONTACT', 'support@thinkleap.io'),
+    defaultIdpCert: getEnvVar('SAML_DEFAULT_IDP_CERT')
+  },
+  targetSite: {
+    baseUrl: getEnvVar('TARGET_SITE_URL', 'https://targetsite.com'),
+    apiUrl: getEnvVar('TARGET_SITE_API_URL'),
+    apiKey: getEnvVar('TARGET_SITE_API_KEY')
+  },
+  extension: {
+    uploadPath: getEnvVar('EXTENSION_UPLOAD_PATH', './uploads'),
+    apiKey: getEnvVar('EXTENSION_API_KEY', 'your-api-key-change-this-in-production'),
+    maxFileSize: getEnvVarAsNumber('EXTENSION_MAX_FILE_SIZE', 50 * 1024 * 1024) // 50MB default
   }
 };
 

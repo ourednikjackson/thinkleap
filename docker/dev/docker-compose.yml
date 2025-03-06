@@ -15,6 +15,8 @@ services:
       - NEXT_PUBLIC_API_URL=http://backend:3001
     depends_on:
       - backend
+    networks:
+      - thinkleap_network
 
   backend:
     build:
@@ -28,22 +30,38 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=development
+      - PORT=3001
       - DB_HOST=db
       - DB_PORT=5432
       - DB_NAME=thinkleap
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DOCKER_ENV=true
       # In Docker environment, use wildcard to accept connections from any origin during development
       - CORS_ORIGIN=*
+      - JWT_SECRET=dev-jwt-secret-do-not-use-in-production
+      - JWT_REFRESH_SECRET=dev-jwt-refresh-secret-do-not-use-in-production
+      - SESSION_SECRET=dev-session-secret-do-not-use-in-production
+      - SAML_ISSUER=http://localhost/saml
+      - CROSSREF_EMAIL=support@thinkleap.io
+      - EXTENSION_API_KEY=dev-extension-api-key
     depends_on:
       - db
       - redis
+    networks:
+      - thinkleap_network
 
   redis:
     image: redis:alpine
     ports:
       - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - thinkleap_network
 
   db:
     image: postgres:14-alpine
@@ -53,3 +71,38 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=thinkleap
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - thinkleap_network
+
+# Temporarily disabled Shibboleth service due to image availability issues
+#  shibboleth:
+#    image: kristophjunge/apache-shibboleth
+#    restart: unless-stopped
+#    depends_on:
+#      - backend
+#    ports:
+#      - "80:80"
+#      - "443:443"
+#    volumes:
+#      - shibboleth_config:/etc/shibboleth
+#      - ${PROJECT_ROOT}/docker/dev/shibboleth/apache2/sites-available:/etc/apache2/sites-available
+#      - ${PROJECT_ROOT}/docker/dev/shibboleth/apache2/sites-enabled:/etc/apache2/sites-enabled
+#      - ${PROJECT_ROOT}/docker/dev/shibboleth/ssl:/etc/ssl
+#    environment:
+#      - SP_HOSTNAME=localhost
+#      - SP_ENTITY_ID=http://localhost/saml
+#      - BACKEND_URL=http://backend:3001
+#      - FRONTEND_URL=http://frontend:3000
+#    networks:
+#      - thinkleap_network
+
+networks:
+  thinkleap_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+#  shibboleth_config:

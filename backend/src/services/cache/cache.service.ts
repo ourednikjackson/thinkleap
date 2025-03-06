@@ -1,8 +1,8 @@
 // backend/src/services/cache/cache.service.ts
 import Redis from 'ioredis';
 import { CacheService1, CacheOptions } from './types';
-
-
+import { RedisFactory } from './redis-factory';
+import { Logger } from '../logger';
 
 export interface ICache {
   get<T>(key: string): Promise<T | null>;
@@ -14,9 +14,20 @@ export interface ICache {
 export class CacheService implements ICache {
   private readonly redis: Redis;
   private readonly defaultTTL = 3600; // 1 hour default TTL
+  private readonly logger = new Logger('CacheService');
 
-  constructor(redisUrl: string) {
-    this.redis = new Redis(redisUrl);
+  constructor(redisUrl: string, redisHost?: string, redisPort?: number) {
+    // Create Redis client using the factory
+    this.redis = RedisFactory.createClient(redisUrl, {
+      dockerHost: redisHost,
+      dockerPort: redisPort,
+      onConnect: () => {
+        this.logger.info('Cache Redis client connected successfully');
+      },
+      onError: (err) => {
+        this.logger.error('Cache Redis connection error:', err);
+      }
+    });
   }
 
   async get<T>(key: string, options: CacheOptions = {}): Promise<T | null> {
@@ -63,5 +74,13 @@ export class CacheService implements ICache {
   async exists(key: string): Promise<boolean> {
     const result = await this.redis.exists(key);
     return result === 1;
+  }
+  
+  getClient(): Redis {
+    return this.redis;
+  }
+  
+  getRedisFactory(): typeof RedisFactory {
+    return RedisFactory;
   }
 }

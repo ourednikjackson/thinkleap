@@ -6,7 +6,7 @@ dotenv.config();
 
 import { config } from './config';
 import { Logger } from './services/logger';
-import { CacheService } from './services/cache';
+import { CacheService, MemoryCacheService } from './services/cache';
 import { DatabaseService } from './services/database/database.service';
 import { App } from './app';
 
@@ -24,7 +24,34 @@ async function startServer() {
 
   try {
     // Initialize services
-    const cacheService = new CacheService(config.redis.url);
+    let cacheService;
+    
+    // Check if we're in Docker environment
+    const isDockerEnv = process.env.DOCKER_ENV === 'true' || 
+                        process.env.REDIS_URL?.includes('redis:6379');
+                        
+    if (isDockerEnv) {
+      logger.info('Detected Docker environment - using Redis with Docker network settings');
+    }
+    
+    try {
+      // Try to use Redis - the CacheService constructor handles Docker environment
+      cacheService = new CacheService(
+        config.redis.url,
+        config.redis.host,
+        config.redis.port
+      );
+      
+      logger.info(`Initializing Redis cache service with URL: ${config.redis.url}`);
+      if (isDockerEnv) {
+        logger.info(`Redis Docker host: ${config.redis.host}, port: ${config.redis.port}`);
+      }
+    } catch (error) {
+      // Fall back to memory cache
+      logger.warn('Redis initialization failed, using in-memory cache as fallback', error);
+      cacheService = new MemoryCacheService();
+    }
+    
     const databaseService = DatabaseService.getInstance(dbConfig, logger);
 
     // Wait for database connection
@@ -37,7 +64,8 @@ async function startServer() {
       databaseService,
       env: config,
       NODE_ENV: config.env,
-      CORS_ORIGIN: config.cors.origin
+      CORS_ORIGIN: config.cors.origin,
+      SESSION_SECRET: process.env.SESSION_SECRET || 'thinkleap-dev-session-secret'
     });
 
     // Start server
