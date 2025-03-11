@@ -1,6 +1,7 @@
 // backend/src/services/cache/cache.service.ts
 import Redis from 'ioredis';
 import { CacheService1, CacheOptions } from './types';
+import { Logger } from '../logger';
 
 
 
@@ -11,12 +12,42 @@ export interface ICache {
   exists(key: string): Promise<boolean>;
 }
 
+export interface RedisConfig {
+  host?: string;
+  url?: string;
+  port?: number;
+  password?: string;
+}
+
 export class CacheService implements ICache {
   private readonly redis: Redis;
   private readonly defaultTTL = 3600; // 1 hour default TTL
+  private readonly logger?: Logger;
 
-  constructor(redisUrl: string) {
-    this.redis = new Redis(redisUrl);
+  constructor(config: RedisConfig | string, logger?: Logger) {
+    this.logger = logger;
+    
+    try {
+      if (typeof config === 'string') {
+        this.redis = new Redis(config);
+      } else {
+        // Use the URL if provided, otherwise use host/port/password
+        if (config.url) {
+          this.redis = new Redis(config.url);
+        } else {
+          this.redis = new Redis({
+            host: config.host || 'localhost',
+            port: config.port || 6379,
+            password: config.password
+          });
+        }
+      }
+      
+      this.logger?.info('Redis cache service initialized successfully');
+    } catch (error) {
+      this.logger?.error('Failed to initialize Redis cache service', error as Error);
+      throw error;
+    }
   }
 
   async get<T>(key: string, options: CacheOptions = {}): Promise<T | null> {

@@ -1,11 +1,16 @@
-import express, { Express, Request, Response, NextFunction } from 'express';
+import express, { Express, Request, Response, NextFunction, Router } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import passport from 'passport';
+import cookieParser from 'cookie-parser';
+import session from 'express-session';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import searchRoutes from './routes/search.routes';
 import savedSearchRoutes from './routes/saved-search.routes';
 import preferencesRoutes from './routes/preferences.routes';
+import samlRoutes from './routes/saml.routes';
+import metadataRoutes from './routes/metadata.routes';
 import { CacheService } from './services/cache';
 import { Logger } from './services/logger';
 import { DatabaseService } from './services/database/database.service';
@@ -36,6 +41,24 @@ export class App {
   private setupMiddleware(): void {
     // Enable JSON body parsing
     this.app.use(express.json());
+    
+    // Enable cookie parsing
+    this.app.use(cookieParser());
+    
+    // Add express-session middleware for passport
+    this.app.use(session({
+      secret: this.config.env.session?.secret || 'thinkleap-secret',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: this.config.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      }
+    }));
+    
+    // Initialize passport
+    this.app.use(passport.initialize());
+    this.app.use(passport.session());
     
     this.app.use(compression());
 
@@ -120,24 +143,34 @@ export class App {
       // Respond with 200
       res.status(200).end();
     });
-    this.app.get('/health', (_req: Request, res: Response) => {
+    
+    // Health check endpoint for system monitoring
+    const healthRouter = express.Router();
+    healthRouter.get('/', (_req: Request, res: Response) => {
       res.json({ status: 'healthy' });
     });
+    this.app.use('/health', healthRouter);
 
     this.app.use('/api/auth', authRoutes);
+    this.app.use('/api/auth/saml', samlRoutes);
     this.app.use('/api/users', userRoutes);
     this.app.use('/api', searchRoutes);
     this.app.use('/api/saved-searches', savedSearchRoutes);
     this.app.use('/api/preferences', preferencesRoutes);
+    this.app.use('/api/metadata', metadataRoutes);
 
-    this.app.use((_req: Request, res: Response) => {
+    // Add a catch-all route handler for 404s after all other routes are defined
+    const notFoundRouter = express.Router();
+    notFoundRouter.all('*', (req: Request, res: Response) => {
       res.status(404).json({
         error: 'Not Found'
       });
     });
+    this.app.use(notFoundRouter);
   }
 
   private setupErrorHandling(): void {
+    // Global error handler middleware
     this.app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
       this.logger.error('Unhandled error', err);
 

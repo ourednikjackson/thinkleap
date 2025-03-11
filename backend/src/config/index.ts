@@ -60,6 +60,17 @@ export const config: Config = {
     refreshSecret: getEnvVar('JWT_REFRESH_SECRET', 'your-jwt-refresh-secret-do-not-use-in-production'),
     accessTokenExpiry: getEnvVar('JWT_ACCESS_TOKEN_EXPIRY', '15m'),
     refreshTokenExpiry: getEnvVar('JWT_REFRESH_TOKEN_EXPIRY', '7d')
+  },
+  // Add SAML config
+  saml: {
+    baseUrl: getEnvVar('SAML_BASE_URL', 'http://localhost:3001'),
+    callbackUrl: getEnvVar('SAML_CALLBACK_URL', 'http://localhost:3001/api/auth/saml/callback'),
+    entryPoint: getEnvVar('SAML_ENTRY_POINT', ''),
+    issuer: getEnvVar('SAML_ISSUER', 'thinkleap'),
+    cert: getEnvVar('SAML_CERT', ''),
+    identifierFormat: getEnvVar('SAML_IDENTIFIER_FORMAT', 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress'),
+    disableRequestedAuthnContext: getEnvVarAsBoolean('SAML_DISABLE_REQUEST_AUTH_CONTEXT', true),
+    signatureAlgorithm: getEnvVar('SAML_SIGNATURE_ALGORITHM', 'sha256'),
   }
 };
 

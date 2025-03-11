@@ -16,11 +16,31 @@ export interface DatabaseConfig {
   
   export interface RedisConfig {
     url: string;
+    host?: string;
     port?: number;
     password?: string;
   }
   
-  export interface Config {
+  export interface SamlConfig {
+  baseUrl: string;
+  callbackUrl?: string;
+  entryPoint: string;
+  issuer: string;
+  cert: string;
+  identifierFormat?: string;
+  disableRequestedAuthnContext?: boolean;
+  signatureAlgorithm?: string;
+  cookieDomain?: string;
+  callbackPath?: string;
+  entityId?: string;
+}
+
+export interface SessionConfig {
+  secret: string;
+  cookieMaxAge?: number;
+}
+
+export interface Config {
     env: string;
     port: number;
     db: DatabaseConfig;
@@ -39,4 +59,6 @@ export interface DatabaseConfig {
       accessTokenExpiry: string;
       refreshTokenExpiry: string;
     };
+    saml: SamlConfig;
+    session?: SessionConfig;
   }

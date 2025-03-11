@@ -1,6 +1,35 @@
 version: '3.8'
 
 services:
+  # Nginx with Shibboleth SP for SAML authentication
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${PROJECT_ROOT}/docker/dev/nginx/conf.d:/etc/nginx/conf.d
+      - ${PROJECT_ROOT}/docker/dev/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - shibboleth
+      - frontend
+      - backend
+    networks:
+      - thinkleap-net
+
+  # Shibboleth SP service for SAML authentication
+  shibboleth:
+    image: unicon/shibboleth-sp:3.4.1
+    volumes:
+      - ${PROJECT_ROOT}/docker/dev/shibboleth/shibboleth2.xml:/etc/shibboleth/shibboleth2.xml
+      - ${PROJECT_ROOT}/docker/dev/shibboleth/attribute-map.xml:/etc/shibboleth/attribute-map.xml
+      - ${PROJECT_ROOT}/docker/dev/shibboleth/sp-cert.pem:/etc/shibboleth/sp-cert.pem
+      - ${PROJECT_ROOT}/docker/dev/shibboleth/sp-key.pem:/etc/shibboleth/sp-key.pem
+    environment:
+      - SHIBSP_LOG_LEVEL=DEBUG
+    networks:
+      - thinkleap-net
+
   frontend:
     build:
       context: ${PROJECT_ROOT}/frontend
@@ -15,6 +44,8 @@ services:
       - NEXT_PUBLIC_API_URL=/api
     depends_on:
       - backend
+    networks:
+      - thinkleap-net
 
   backend:
     build:
@@ -34,16 +65,21 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - REDIS_URL=redis://redis:6379
-      # In Docker environment, use wildcard to accept connections from any origin during development
       - CORS_ORIGIN=*
+      - SAML_BASE_URL=https://thinkleap.local
+      - SAML_ENTITY_ID=https://thinkleap.local/shibboleth
     depends_on:
       - db
       - redis
+    networks:
+      - thinkleap-net
 
   redis:
     image: redis:alpine
     ports:
       - "6380:6379"
+    networks:
+      - thinkleap-net
 
   db:
     image: postgres:14-alpine
@@ -53,3 +89,14 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=thinkleap
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - thinkleap-net
+
+networks:
+  thinkleap-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
