@@ -4,14 +4,14 @@ import { Card } from '@/components/ui/card';
 import { Pagination } from '@/components/search/Pagination';
 import { Badge } from '@/components/ui/badge';
 import { ExternalLink, Calendar, FileText, Globe, Link, BookOpen } from 'lucide-react';
-import { SearchResult, SearchResponse } from '@thinkleap/shared/types/search';
+import { SearchResultItem, SearchResult, SearchResponse } from '@thinkleap/shared/types/search';
 import { cn } from '@/lib/utils';
 import { ExportDialog } from './ExportDialog';
 import { SearchResultsSkeleton } from './SearchResultsSkeleton';
 import { useSearchParams } from 'next/navigation';
 
 interface SearchResultsProps {
-  results: {data: SearchResponse} | null;
+  results: {data: SearchResult} | null;
   isLoading: boolean;
   onPageChange: (page: number) => void;
   filters?: Record<string, any>;
@@ -22,7 +22,7 @@ export function SearchResults({ results, isLoading, onPageChange, filters = {} }
   const { preferences } = usePreferences();
   const isDense = preferences.display.density === 'compact';
 
-  const formatAuthors = (authors: SearchResult['authors']) => {
+  const formatAuthors = (authors: SearchResultItem['authors']) => {
     if (authors.length === 0) return 'No authors listed';
     if (authors.length <= 3) return authors.map(a => a.name).join(', ');
     return `${authors[0].name}, ${authors[1].name}, et al.`;
@@ -52,10 +52,10 @@ export function SearchResults({ results, isLoading, onPageChange, filters = {} }
           Showing {results.data.results.length} of {results.data.totalResults} results
         </div>
         <ExportDialog 
-          results={results.data.results}
+          results={results.data.results as any}
           totalResults={results.data.totalResults}
-          searchQuery={searchParams.get('q') || ''} // Add the missing prop
-          searchFilters={filters} // Optionally add filters too
+          searchQuery={searchParams.get('q') || ''}
+          searchFilters={filters}
         />
       </div>
 
@@ -91,10 +91,16 @@ export function SearchResults({ results, isLoading, onPageChange, filters = {} }
               {result.journal && (
                 <p className="flex items-center gap-2">
                   <BookOpen className="h-4 w-4" />
-                  {result.journal.name}
-                  {result.journal.volume && `, Volume ${result.journal.volume}`}
-                  {result.journal.issue && `, Issue ${result.journal.issue}`}
-                  {result.journal.pages && `, Pages ${result.journal.pages}`}
+                  {typeof result.journal === 'string' ? (
+                    result.journal
+                  ) : (
+                    <>
+                      {result.journal.name}
+                      {result.journal.volume && `, Volume ${result.journal.volume}`}
+                      {result.journal.issue && `, Issue ${result.journal.issue}`}
+                      {result.journal.pages && `, Pages ${result.journal.pages}`}
+                    </>
+                  )}
                 </p>
               )}
             </div>

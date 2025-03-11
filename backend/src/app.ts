@@ -11,6 +11,7 @@ import savedSearchRoutes from './routes/saved-search.routes';
 import preferencesRoutes from './routes/preferences.routes';
 import samlRoutes from './routes/saml.routes';
 import metadataRoutes from './routes/metadata.routes';
+import oaiPmhRoutes from './routes/oai-pmh';
 import { CacheService } from './services/cache';
 import { Logger } from './services/logger';
 import { DatabaseService } from './services/database/database.service';
@@ -158,6 +159,7 @@ export class App {
     this.app.use('/api/saved-searches', savedSearchRoutes);
     this.app.use('/api/preferences', preferencesRoutes);
     this.app.use('/api/metadata', metadataRoutes);
+    this.app.use('/api/oai-pmh', oaiPmhRoutes);
 
     // Add a catch-all route handler for 404s after all other routes are defined
     const notFoundRouter = express.Router();

@@ -1,5 +1,12 @@
 // shared/types/search.ts
 
+export interface SearchParams {
+  query: string;
+  page?: number;
+  limit?: number;
+  filters?: SearchFilters;
+}
+
 export interface DateRange {
     start?: Date;
     end?: Date;
@@ -36,21 +43,33 @@ export interface DateRange {
     identifier?: string;  // For ISSN or other IDs
   }
   
-  export interface SearchResult {
+  export interface SearchResultItem {
     id: string;
     databaseId: string;  // Which database this result came from
     title: string;
     authors: Author[];
     abstract?: string;
-    publicationDate?: Date;
-    journal?: Journal;
+    publicationDate?: Date | string;
+    journal?: Journal | string;
+    url?: string;
     doi?: string;
     keywords?: string[];
     articleType?: string;
     language?: string;
     fullTextUrl?: string;
     citationCount?: number;
+    provider?: string;
     metadata: Record<string, unknown>;  // Database-specific additional data
+  }
+
+  export interface SearchResult {
+    results: SearchResultItem[];
+    totalResults: number;
+    page: number;
+    totalPages: number;
+    executionTimeMs: number;
+    databasesSearched: string[];
+    error?: string;
   }
 
   
@@ -63,11 +82,6 @@ export interface SearchError {
 }
   
 export interface SearchResponse {
-  results: SearchResult[];
-  totalResults: number;
-  page: number;
-  totalPages: number;
-  executionTimeMs: number;
-  databasesSearched: string[];
+  data: SearchResult;
   errors?: Array<{ source: string; error: SearchError }>;
 }

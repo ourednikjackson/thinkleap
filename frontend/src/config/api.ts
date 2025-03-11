@@ -29,6 +29,25 @@ export const api = {
       withKey: 10, // 10 requests/second with API key
       withoutKey: 3 // 3 requests/second without API key
     }
+  },
+  
+  // arXiv API configuration
+  arxiv: {
+    baseUrl: 'http://export.arxiv.org/api',
+    endpoints: {
+      search: '/query'
+    },
+    
+    // Default parameters
+    defaults: {
+      sortBy: 'relevance',
+      sortOrder: 'descending'
+    },
+    
+    // Rate limits - arXiv requires no more than 1 request every 3 seconds
+    rateLimits: {
+      default: 0.33 // requests per second
+    }
   }
 };
 

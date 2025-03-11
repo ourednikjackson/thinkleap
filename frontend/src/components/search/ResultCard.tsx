@@ -1,15 +1,15 @@
 'use client';
 import { useState } from 'react';
-import { SearchResult } from '@thinkleap/shared/types/search';
+import { SearchResultItem } from '@thinkleap/shared/types/search';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BookmarkIcon, ExternalLinkIcon, FileIcon, InfoIcon } from 'lucide-react';
+import { BookmarkIcon, ExternalLinkIcon, FileIcon, InfoIcon, DatabaseIcon } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ResultCardProps {
-  result: SearchResult;
-  onSave?: (result: SearchResult) => void;
+  result: SearchResultItem;
+  onSave?: (result: SearchResultItem) => void;
 }
 
 export function ResultCard({ result, onSave }: ResultCardProps) {
@@ -67,9 +67,14 @@ export function ResultCard({ result, onSave }: ResultCardProps) {
         
         {result.journal && (
           <div className="text-sm font-medium">
-            {result.journal.name}
-            {result.journal.volume && ` • Volume ${result.journal.volume}`}
-            {result.journal.issue && ` • Issue ${result.journal.issue}`}
+            {typeof result.journal === 'string' 
+              ? result.journal
+              : <>
+                  {result.journal.name}
+                  {result.journal.volume && ` • Volume ${result.journal.volume}`}
+                  {result.journal.issue && ` • Issue ${result.journal.issue}`}
+                </>
+            }
           </div>
         )}
       </CardHeader>
@@ -99,22 +104,32 @@ export function ResultCard({ result, onSave }: ResultCardProps) {
       
       <CardFooter className="flex items-center justify-between border-t px-6 py-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <FileIcon className="h-4 w-4" /> 
-          {result.metadata.pmid ? (
-            <a 
-              href={`https://pubmed.ncbi.nlm.nih.gov/${result.metadata.pmid}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              PMID: {result.metadata.pmid}
-            </a>
+          {result.databaseId.startsWith('oai-pmh') ? (
+            <>
+              <DatabaseIcon className="h-4 w-4" /> 
+              <span>Source: {result.provider || 'OAI-PMH'}</span>
+            </>
+          ) : result.metadata && typeof result.metadata === 'object' && 'pmid' in result.metadata && result.metadata.pmid ? (
+            <>
+              <FileIcon className="h-4 w-4" /> 
+              <a 
+                href={`https://pubmed.ncbi.nlm.nih.gov/${String(result.metadata.pmid)}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                PMID: {String(result.metadata.pmid)}
+              </a>
+            </>
           ) : (
-            <span>ID: {result.id}</span>
+            <>
+              <FileIcon className="h-4 w-4" /> 
+              <span>ID: {result.id}</span>
+            </>
           )}
         </div>
         
-        {result.abstract && (
+        {result.abstract ? (
           <Button 
             variant="ghost" 
             size="sm" 
@@ -124,7 +139,7 @@ export function ResultCard({ result, onSave }: ResultCardProps) {
             <InfoIcon className="h-3 w-3" />
             {expanded ? 'Show less' : 'Show more'}
           </Button>
-        )}
+        ) : null}
       </CardFooter>
     </Card>
   );

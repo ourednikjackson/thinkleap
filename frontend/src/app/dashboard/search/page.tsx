@@ -6,7 +6,8 @@ import { usePreferences } from '@/lib/preferences/PreferencesContext';
 import { SearchForm } from '@/components/search/SearchForm';
 import { FilterPanel } from '@/components/search/FilterPanel';
 import { SearchResults } from '@/components/search/SearchResults';
-import { SearchResponse, SearchFilters } from '@thinkleap/shared/types/search';
+import SearchSourceSelector from '@/components/search/SearchSourceSelector';
+import { SearchResponse, SearchFilters, SearchResult } from '@thinkleap/shared/types/search';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -16,7 +17,8 @@ export default function SearchPage() {
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<{data: SearchResponse} | null>(null);
+  const [results, setResults] = useState<{data: SearchResult} | null>(null);
+  const [searchSource, setSearchSource] = useState<string>('all'); // 'all', 'pubmed', or 'jstor'
 
   // Initialize filters with empty arrays for authors and journals
   // Initialize with defaults and update after preferences load
@@ -54,7 +56,8 @@ export default function SearchPage() {
         page: page.toString(),
         limit: (preferences.search.resultsPerPage || 10).toString(),
         sortBy: preferences.search.defaultSortOrder || 'relevance',
-        filters: JSON.stringify(filters)
+        filters: JSON.stringify(filters),
+        source: searchSource // Add search source parameter
       });
       
       const response = await fetch(`/api/search?${queryParams}`, {
@@ -91,6 +94,19 @@ export default function SearchPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="md:col-span-3">
             <SearchForm onSearch={handleSearch} isLoading={isLoading} />
+            <div className="mt-4">
+              <SearchSourceSelector
+                selectedSource={searchSource}
+                onSourceChange={(source) => {
+                  setSearchSource(source);
+                  // If there's an active search, re-run with the new source
+                  const currentQuery = searchParams.get('q');
+                  if (currentQuery) {
+                    handleSearch(currentQuery, 1);
+                  }
+                }}
+              />
+            </div>
           </div>
           <div className="md:col-span-1">
             <FilterPanel 
