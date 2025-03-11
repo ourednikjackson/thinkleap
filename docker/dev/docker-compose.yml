@@ -19,7 +19,9 @@ services:
 
   # Shibboleth SP service for SAML authentication
   shibboleth:
-    image: unicon/shibboleth-sp:3.4.1
+    build:
+      context: ${PROJECT_ROOT}/docker/dev/shibboleth
+      dockerfile: Dockerfile
     volumes:
       - ${PROJECT_ROOT}/docker/dev/shibboleth/shibboleth2.xml:/etc/shibboleth/shibboleth2.xml
       - ${PROJECT_ROOT}/docker/dev/shibboleth/attribute-map.xml:/etc/shibboleth/attribute-map.xml
