@@ -2,53 +2,51 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth/useAuth';
+import { useUser } from '@clerk/nextjs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { API_ENDPOINTS } from '@/config/api';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, isLoaded } = useUser();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Redirect to sign-in if user is not authenticated
+  useEffect(() => {
+    if (isLoaded && !user) {
+      window.location.href = '/sign-in?redirect_url=/dashboard/profile';
+    }
+  }, [user, isLoaded]);
+
   useEffect(() => {
     if (user) {
       setFullName(user.fullName || '');
-      setEmail(user.email || '');
+      setEmail(user.primaryEmailAddress?.emailAddress || '');
     }
   }, [user]);
 
   const handleUpdateProfile = async () => {
+    if (!user) {
+      toast.error('You must be signed in to update your profile');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const response = await fetch(API_ENDPOINTS.USER.PROFILE, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fullName,
-          email,
-        }),
+      await user.update({
+        firstName: fullName.split(' ')[0],
+        lastName: fullName.split(' ').slice(1).join(' '),
       });
-  
-      if (!response.ok) {
-        throw new Error('Failed to update profile');
-      }
-  
-      // Wait for response to complete
-      await response.json();
       
       toast.success('Profile updated successfully');
     } catch (error) {
+      console.error('Error updating profile:', error);
       toast.error('Failed to update profile');
-      console.error(error);
     } finally {
       setIsLoading(false);
     }

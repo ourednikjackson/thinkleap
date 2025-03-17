@@ -1,64 +1,31 @@
 // API route for OAI-PMH harvest metrics
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '../../../../../lib/db';
-import { logger } from '../../../../../lib/logger';
+import { getAuth } from '@clerk/nextjs/server';
 
 // Get OAI-PMH harvest metrics
 export async function GET(request: NextRequest) {
   try {
-    // Get total sources count
-    const [{ total_sources }] = await db('oai_pmh_sources')
-      .count('* as total_sources')
-      .first();
+    const { userId } = getAuth(request);
     
-    // Get active sources count
-    const [{ active_sources }] = await db('oai_pmh_sources')
-      .where('status', 'active')
-      .count('* as active_sources')
-      .first();
-    
-    // Get sources by status
-    const sourcesByStatus = await db('oai_pmh_sources')
-      .select('status')
-      .count('* as count')
-      .groupBy('status');
-    
-    // Format sources by status
-    const sources_by_status = {
-      active: 0,
-      inactive: 0,
-      harvesting: 0,
-      error: 0
-    };
-    
-    sourcesByStatus.forEach(item => {
-      sources_by_status[item.status as keyof typeof sources_by_status] = Number(item.count);
+    if (!userId) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/oai-pmh/metrics`, {
+      headers: {
+        'X-User-Id': userId,
+      },
     });
-    
-    // Get total records count
-    const [{ total_records }] = await db('harvested_metadata')
-      .count('* as total_records')
-      .first();
-    
-    // Get last harvest time
-    const lastHarvest = await db('harvest_logs')
-      .select('end_time')
-      .where('status', 'completed')
-      .orderBy('end_time', 'desc')
-      .first();
-    
-    // Prepare response
-    const metrics = {
-      total_sources: Number(total_sources),
-      active_sources: Number(active_sources),
-      total_records: Number(total_records),
-      last_harvest_time: lastHarvest?.end_time,
-      sources_by_status
-    };
-    
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch OAI-PMH metrics');
+    }
+
+    const metrics = await response.json();
     return NextResponse.json(metrics);
   } catch (error) {
-    logger.error('Error fetching OAI-PMH metrics:', error);
+    console.error('Error fetching OAI-PMH metrics:', error);
     return NextResponse.json(
       { message: 'Error fetching OAI-PMH metrics', error: String(error) },
       { status: 500 }

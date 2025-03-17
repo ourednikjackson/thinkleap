@@ -1,6 +1,4 @@
 // OAI-PMH search client
-import { db } from '../../../lib/db';
-import { logger } from '../../../lib/logger';
 import { 
   SearchParams, 
   SearchResult, 
@@ -9,6 +7,7 @@ import {
 
 interface OaiPmhSearchOptions extends SearchParams {
   sourceId?: string;
+  userId: string;
 }
 
 /**
@@ -18,72 +17,45 @@ export async function searchOaiPmh(options: OaiPmhSearchOptions): Promise<{ data
   const startTime = Date.now();
   
   try {
-    // Normalize options
-    const query = options.query;
-    const page = options.page || 1;
-    const limit = options.limit || 10;
-    const offset = (page - 1) * limit;
-    const sourceId = options.sourceId;
-    
-    logger.info(`OAI-PMH search: "${query}" (page ${page}, limit ${limit}${sourceId ? `, sourceId: ${sourceId}` : ''})`);
-    
-    // Build base query
-    let dbQuery = db('harvested_metadata')
-      .select([
-        'id',
-        'provider',
-        'record_id',
-        'title',
-        'authors',
-        'abstract',
-        'publication_date as publicationDate',
-        'journal',
-        'url',
-        'doi',
-        'keywords',
-        'source_id as sourceId'
-      ]);
-    
-    // Apply text search if query is provided
-    if (query && query.trim()) {
-      dbQuery = dbQuery.whereRaw(
-        `to_tsvector('english', title || ' ' || COALESCE(abstract, '')) @@ plainto_tsquery('english', ?)`,
-        [query.trim()]
-      );
+    // Build query parameters
+    const params = new URLSearchParams({
+      query: options.query || '',
+      page: String(options.page || 1),
+      limit: String(options.limit || 10)
+    });
+
+    if (options.sourceId) {
+      params.append('sourceId', options.sourceId);
     }
-    
-    // Filter by source if provided
-    if (sourceId) {
-      dbQuery = dbQuery.where('source_id', sourceId);
-    }
-    
-    // Apply date filters if provided
+
     if (options.filters?.dateRange?.start) {
-      dbQuery = dbQuery.where('publication_date', '>=', options.filters.dateRange.start);
+      params.append('dateStart', options.filters.dateRange.start.toISOString().split('T')[0]);
     }
-    
+
     if (options.filters?.dateRange?.end) {
-      dbQuery = dbQuery.where('publication_date', '<=', options.filters.dateRange.end);
+      params.append('dateEnd', options.filters.dateRange.end.toISOString().split('T')[0]);
     }
-    
-    // Get total count
-    const countQuery = dbQuery.clone().count('* as count').first();
-    
-    // Apply pagination to results query
-    dbQuery = dbQuery
-      .orderBy('publication_date', 'desc')
-      .limit(limit)
-      .offset(offset);
-    
-    // Execute both queries
-    const [results, countResult] = await Promise.all([
-      dbQuery,
-      countQuery
-    ]);
-    
+
+    // Make request to external API
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/search/oai-pmh?${params.toString()}`,
+      {
+        headers: {
+          'X-User-Id': options.userId,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to search OAI-PMH metadata');
+    }
+
+    const data = await response.json();
+
     // Format results as SearchResultItems
-    const formattedResults: SearchResultItem[] = results.map((item: any) => {
-      // Parse JSON fields
+    const formattedResults: SearchResultItem[] = data.results.map((item: any) => {
+      // Parse JSON fields if needed
       const authors = typeof item.authors === 'string' 
         ? JSON.parse(item.authors) 
         : (item.authors || []);
@@ -109,24 +81,20 @@ export async function searchOaiPmh(options: OaiPmhSearchOptions): Promise<{ data
         }
       };
     });
-    
-    // Calculate total pages
-    const totalResults = parseInt((countResult as any)?.count || '0');
-    const totalPages = Math.ceil(totalResults / limit);
-    
+
     // Return formatted response
     return {
       data: {
         results: formattedResults,
-        totalResults,
-        totalPages,
-        page,
+        totalResults: data.totalResults,
+        totalPages: data.totalPages,
+        page: data.page,
         executionTimeMs: Date.now() - startTime,
         databasesSearched: ['oai-pmh']
       }
     };
   } catch (error) {
-    logger.error('OAI-PMH search error:', error);
+    console.error('OAI-PMH search error:', error);
     throw error;
   }
 }

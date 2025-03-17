@@ -1,14 +1,14 @@
 // frontend/src/app/dashboard/page.tsx
 "use client";
 
-import { useAuth } from '@/lib/auth';
+import { useUser } from '@clerk/nextjs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { routes } from '@/config/routes';
 import Link from 'next/link';
 import { SearchIcon, BookmarkIcon, UserIcon, Settings2Icon } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user } = useUser();
 
   return (
     <div className="space-y-6">
@@ -58,8 +58,8 @@ export default function DashboardPage() {
           href="/dashboard/settings"
         />
         
-        {/* If user is not verified, show verification card */}
-        {user && !user.emailVerified && (
+        {/* If user's email is not verified, show verification card */}
+        {user && user.primaryEmailAddress?.verification?.status !== 'verified' && (
           <DashboardCard
             title="Verify Institution"
             description="Verify your institution to access additional features"

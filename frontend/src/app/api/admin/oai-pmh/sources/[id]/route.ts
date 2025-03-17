@@ -1,7 +1,6 @@
 // API route for managing a specific OAI-PMH source
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '../../../../../../lib/db';
-import { logger } from '../../../../../../lib/logger';
+import { getAuth } from '@clerk/nextjs/server';
 
 // Retrieve a specific OAI-PMH source
 export async function GET(
@@ -9,6 +8,12 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { userId } = getAuth(request);
+    
+    if (!userId) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     const id = parseInt(params.id);
     if (isNaN(id)) {
       return NextResponse.json(
@@ -17,20 +22,27 @@ export async function GET(
       );
     }
     
-    const source = await db('oai_pmh_sources')
-      .where({ id })
-      .first();
-    
-    if (!source) {
-      return NextResponse.json(
-        { message: 'OAI-PMH source not found' },
-        { status: 404 }
-      );
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/oai-pmh/sources/${id}`, {
+      headers: {
+        'X-User-Id': userId,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return NextResponse.json(
+          { message: 'OAI-PMH source not found' },
+          { status: 404 }
+        );
+      }
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch OAI-PMH source');
     }
-    
+
+    const source = await response.json();
     return NextResponse.json(source);
   } catch (error) {
-    logger.error(`Error fetching OAI-PMH source ${params.id}:`, error);
+    console.error('Error fetching OAI-PMH source:', error);
     return NextResponse.json(
       { message: 'Error fetching OAI-PMH source', error: String(error) },
       { status: 500 }
@@ -44,6 +56,12 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { userId } = getAuth(request);
+    
+    if (!userId) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     const id = parseInt(params.id);
     if (isNaN(id)) {
       return NextResponse.json(
@@ -62,35 +80,37 @@ export async function PUT(
       );
     }
     
-    // Check if source exists
-    const existingSource = await db('oai_pmh_sources')
-      .where({ id })
-      .first();
-    
-    if (!existingSource) {
-      return NextResponse.json(
-        { message: 'OAI-PMH source not found' },
-        { status: 404 }
-      );
-    }
-    
-    // Update source
-    const [updatedSource] = await db('oai_pmh_sources')
-      .where({ id })
-      .update({
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/oai-pmh/sources/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Id': userId,
+      },
+      body: JSON.stringify({
         name: body.name,
         oai_endpoint: body.oai_endpoint,
         metadata_prefix: body.metadata_prefix,
         set_spec: body.set_spec || null,
         harvest_interval_hours: body.harvest_interval_hours || 24,
-        is_active: body.is_active !== undefined ? body.is_active : true,
-        updated_at: new Date().toISOString()
-      })
-      .returning('*');
-    
+        is_active: body.is_active !== undefined ? body.is_active : true
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return NextResponse.json(
+          { message: 'OAI-PMH source not found' },
+          { status: 404 }
+        );
+      }
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update OAI-PMH source');
+    }
+
+    const updatedSource = await response.json();
     return NextResponse.json(updatedSource);
   } catch (error) {
-    logger.error(`Error updating OAI-PMH source ${params.id}:`, error);
+    console.error('Error updating OAI-PMH source:', error);
     return NextResponse.json(
       { message: 'Error updating OAI-PMH source', error: String(error) },
       { status: 500 }
@@ -104,6 +124,12 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { userId } = getAuth(request);
+    
+    if (!userId) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     const id = parseInt(params.id);
     if (isNaN(id)) {
       return NextResponse.json(
@@ -111,32 +137,28 @@ export async function DELETE(
         { status: 400 }
       );
     }
-    
-    // Check if source exists
-    const existingSource = await db('oai_pmh_sources')
-      .where({ id })
-      .first();
-    
-    if (!existingSource) {
-      return NextResponse.json(
-        { message: 'OAI-PMH source not found' },
-        { status: 404 }
-      );
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/oai-pmh/sources/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'X-User-Id': userId,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return NextResponse.json(
+          { message: 'OAI-PMH source not found' },
+          { status: 404 }
+        );
+      }
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to delete OAI-PMH source');
     }
-    
-    // Delete associated harvest logs first
-    await db('oai_pmh_harvest_logs')
-      .where({ source_id: id })
-      .delete();
-    
-    // Delete source
-    await db('oai_pmh_sources')
-      .where({ id })
-      .delete();
-    
+
     return NextResponse.json({ message: 'OAI-PMH source deleted successfully' });
   } catch (error) {
-    logger.error(`Error deleting OAI-PMH source ${params.id}:`, error);
+    console.error('Error deleting OAI-PMH source:', error);
     return NextResponse.json(
       { message: 'Error deleting OAI-PMH source', error: String(error) },
       { status: 500 }

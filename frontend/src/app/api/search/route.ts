@@ -1,5 +1,6 @@
 // API route for search with PubMed, JSTOR, arXiv and OAI-PMH integration
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuth } from '@clerk/nextjs/server';
 import { searchPubMed } from './pubmed-client';
 import { searchJstor } from './jstor-client';
 import { searchOaiPmh } from './oai-pmh-client';
@@ -34,6 +35,15 @@ function mergeResults(resultsA: any, resultsB: any) {
 
 export async function GET(request: NextRequest) {
   try {
+    // Verify authentication
+    const { userId } = getAuth(request);
+    if (!userId) {
+      return NextResponse.json(
+        { message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
     const page = searchParams.get('page') || '1';

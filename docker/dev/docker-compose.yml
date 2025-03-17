@@ -1,37 +1,6 @@
 version: '3.8'
 
 services:
-  # Nginx with Shibboleth SP for SAML authentication
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ${PROJECT_ROOT}/docker/dev/nginx/conf.d:/etc/nginx/conf.d
-      - ${PROJECT_ROOT}/docker/dev/nginx/ssl:/etc/nginx/ssl
-    depends_on:
-      - shibboleth
-      - frontend
-      - backend
-    networks:
-      - thinkleap-net
-
-  # Shibboleth SP service for SAML authentication
-  shibboleth:
-    build:
-      context: ${PROJECT_ROOT}/docker/dev/shibboleth
-      dockerfile: Dockerfile
-    volumes:
-      - ${PROJECT_ROOT}/docker/dev/shibboleth/shibboleth2.xml:/etc/shibboleth/shibboleth2.xml
-      - ${PROJECT_ROOT}/docker/dev/shibboleth/attribute-map.xml:/etc/shibboleth/attribute-map.xml
-      - ${PROJECT_ROOT}/docker/dev/shibboleth/sp-cert.pem:/etc/shibboleth/sp-cert.pem
-      - ${PROJECT_ROOT}/docker/dev/shibboleth/sp-key.pem:/etc/shibboleth/sp-key.pem
-    environment:
-      - SHIBSP_LOG_LEVEL=DEBUG
-    networks:
-      - thinkleap-net
-
   frontend:
     build:
       context: ${PROJECT_ROOT}/frontend
@@ -39,11 +8,18 @@ services:
     volumes:
       - ${PROJECT_ROOT}/frontend:/app
       - /app/node_modules
+      - ${PROJECT_ROOT}/frontend/.env.local:/app/.env.local
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=/api
+      - NEXT_PUBLIC_API_URL=http://localhost:3001/api
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+      - NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+      - NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+      - NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
     depends_on:
       - backend
     networks:
@@ -67,9 +43,8 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - REDIS_URL=redis://redis:6379
-      - CORS_ORIGIN=*
-      - SAML_BASE_URL=https://thinkleap.local
-      - SAML_ENTITY_ID=https://thinkleap.local/shibboleth
+      - CORS_ORIGIN=http://localhost:3000
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
     depends_on:
       - db
       - redis

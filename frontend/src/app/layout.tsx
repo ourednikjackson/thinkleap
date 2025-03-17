@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { AuthProvider } from '@/lib/auth';
+import { ClerkProvider } from '@clerk/nextjs';
 import { PreferencesProvider } from '@/lib/preferences/PreferencesContext';
 import { MainNav } from '@/components/layout/MainNav';
 import { Toaster } from "@/components/ui/sonner";
@@ -18,7 +18,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
+        <ClerkProvider>
           <PreferencesProvider>
             <div className="min-h-screen flex flex-col">
               <MainNav />
@@ -28,7 +28,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             </div>
             <Toaster />
           </PreferencesProvider>
-        </AuthProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

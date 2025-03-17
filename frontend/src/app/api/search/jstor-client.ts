@@ -1,12 +1,35 @@
 // JSTOR API client for searching harvested metadata
+import type { QueryResult } from 'pg';
 import { db } from '../../../lib/db';
-import { logger } from '../../../lib/logger';
 
 interface JstorSearchParams {
   query: string;
   page: number;
   limit: number;
-  filters?: any;
+  filters?: {
+    dateRange?: {
+      start?: Date;
+      end?: Date;
+    };
+    authors?: string[];
+    journals?: string[];
+    keywords?: string[];
+  };
+}
+
+interface JstorQueryResult {
+  id: string;
+  provider: string;
+  record_id: string;
+  title: string;
+  authors: string;
+  abstract?: string;
+  publication_date?: string;
+  journal?: string;
+  url?: string;
+  doi?: string;
+  keywords?: string[];
+  source_id?: string;
 }
 
 interface JstorArticle {
@@ -31,62 +54,76 @@ export async function searchJstor({ query, page, limit, filters }: JstorSearchPa
       throw new Error('Search query cannot be empty');
     }
     
-    logger.info(`Starting JSTOR search for "${query}" (page ${page}, limit ${limit})`);
+    console.info(`Starting JSTOR search for "${query}" (page ${page}, limit ${limit})`);
     const startTime = Date.now();
     
     // Build the SQL query to search harvested metadata
-    const searchQuery = db.from('harvested_metadata')
-      .where('provider', 'jstor')
-      .whereRaw("to_tsvector('english', title || ' ' || COALESCE(abstract, '')) @@ plainto_tsquery('english', ?)", 
-        [query.trim()]);
+    const searchQuery = {
+      text: "SELECT * FROM harvested_metadata WHERE provider = 'jstor' AND to_tsvector('english', title || ' ' || COALESCE(abstract, '')) @@ plainto_tsquery('english', $1)",
+      values: [query.trim()]
+    };
     
     // Apply filters if provided
+    let conditions = [];
+    let values = [query.trim()];
+    let paramCount = 1;
+
     if (filters) {
       // Date range filter
       if (filters.dateRange) {
         if (filters.dateRange.start) {
-          searchQuery.where('publication_date', '>=', filters.dateRange.start);
+          paramCount++;
+          conditions.push(`publication_date >= $${paramCount}`);
+          values.push(filters.dateRange.start.toISOString().split('T')[0]);
         }
         if (filters.dateRange.end) {
-          searchQuery.where('publication_date', '<=', filters.dateRange.end);
+          paramCount++;
+          conditions.push(`publication_date <= $${paramCount}`);
+          values.push(filters.dateRange.end.toISOString().split('T')[0]);
         }
       }
       
       // Author filter
       if (filters.authors && filters.authors.length > 0) {
-        // Since authors are stored as JSONB, we need to use JSONB containment operators
         const authorConditions = filters.authors.map((author: string) => {
-          return db.raw(`authors @> ?::jsonb`, [JSON.stringify([{ name: author }])]);
+          paramCount++;
+          values.push(JSON.stringify([{ name: author }]));
+          return `authors @> $${paramCount}::jsonb`;
         });
-        
-        searchQuery.where(function() {
-          authorConditions.forEach((condition: any) => {
-            this.orWhere(condition);
-          });
-        });
+        conditions.push(`(${authorConditions.join(' OR ')})`);
       }
       
       // Journal filter
       if (filters.journals && filters.journals.length > 0) {
-        searchQuery.whereIn('journal', filters.journals);
+        paramCount++;
+        conditions.push(`journal = ANY($${paramCount}::text[])`);
+        values.push(`{${filters.journals.join(',')}}`);
+
       }
       
       // Keywords filter
       if (filters.keywords && filters.keywords.length > 0) {
-        searchQuery.where(function() {
-          filters.keywords.forEach((keyword: string) => {
-            this.orWhereRaw('? = ANY(keywords)', [keyword]);
-          });
-        });
+        paramCount++;
+        conditions.push(`keywords && $${paramCount}::text[]`);
+        values.push(`{${filters.keywords.join(',')}}`);
+
       }
     }
+
+    // Update the search query with filters
+    searchQuery.text += conditions.length > 0 ? ` AND ${conditions.join(' AND ')}` : '';
+    searchQuery.values = values;
     
     // Get count of total matching records
-    const countResult = await searchQuery.clone().count('* as total').first();
-    const totalCount = parseInt(countResult?.total || '0');
+    const countQuery = {
+      text: `SELECT COUNT(*) as total FROM (${searchQuery.text}) AS subquery`,
+      values: searchQuery.values
+    };
+    const countResult = await db.query(countQuery);
+    const totalCount = parseInt(countResult.rows[0]?.total || '0');
     
     if (totalCount === 0) {
-      logger.info(`No JSTOR results found for query "${query}"`);
+      console.info(`No JSTOR results found for query "${query}"`);
       return {
         data: {
           results: [],
@@ -101,19 +138,19 @@ export async function searchJstor({ query, page, limit, filters }: JstorSearchPa
     
     // Get paginated results
     const offset = (page - 1) * limit;
-    const results = await searchQuery
-      .select('*')
-      .orderBy('publication_date', 'desc')
-      .limit(limit)
-      .offset(offset);
+    const paginatedQuery = {
+      text: `${searchQuery.text} ORDER BY publication_date DESC LIMIT $${searchQuery.values.length + 1} OFFSET $${searchQuery.values.length + 2}`,
+      values: [...searchQuery.values, limit, offset]
+    };
+    const results = await db.query(paginatedQuery);
     
-    logger.info(`Found ${totalCount} JSTOR results for query "${query}", returning page ${page}`);
+    console.info(`Found ${totalCount} JSTOR results for query "${query}", returning page ${page}`);
     
     // Transform to our application format
-    const transformedResults = transformJstorArticles(results);
+    const transformedResults = transformJstorArticles(results.rows);
     const executionTimeMs = Date.now() - startTime;
     
-    logger.info(`Completed JSTOR search in ${executionTimeMs}ms`);
+    console.info(`Completed JSTOR search in ${executionTimeMs}ms`);
     
     return {
       data: {
@@ -126,7 +163,7 @@ export async function searchJstor({ query, page, limit, filters }: JstorSearchPa
       }
     };
   } catch (error) {
-    logger.error('Error in searchJstor:', error);
+    console.error('Error in searchJstor:', error);
     throw error; // Propagate the error to the API route handler
   }
 }
@@ -134,7 +171,7 @@ export async function searchJstor({ query, page, limit, filters }: JstorSearchPa
 /**
  * Transform JSTOR articles to our application format
  */
-function transformJstorArticles(articles: any[]): any[] {
+function transformJstorArticles(articles: JstorQueryResult[]): JstorArticle[] {
   return articles.map(article => {
     // Parse dates for consistent formatting
     let publicationDate = null;
@@ -142,7 +179,7 @@ function transformJstorArticles(articles: any[]): any[] {
       try {
         publicationDate = new Date(article.publication_date);
       } catch (e) {
-        logger.warn(`Invalid publication date: ${article.publication_date}`, e);
+        console.warn(`Invalid publication date: ${article.publication_date}`, e);
       }
     }
     
@@ -152,13 +189,15 @@ function transformJstorArticles(articles: any[]): any[] {
       : null;
     
     // Parse authors JSON if needed
-    let authors = article.authors;
-    if (typeof authors === 'string') {
+    let parsedAuthors: Array<{ name: string; identifier?: string }> = [];
+    if (typeof article.authors === 'string') {
       try {
-        authors = JSON.parse(authors);
+        const parsed = JSON.parse(article.authors);
+        if (Array.isArray(parsed)) {
+          parsedAuthors = parsed;
+        }
       } catch (e) {
-        logger.warn(`Failed to parse authors JSON: ${authors}`, e);
-        authors = [];
+        console.warn(`Failed to parse authors JSON: ${article.authors}`, e);
       }
     }
     
@@ -177,7 +216,7 @@ function transformJstorArticles(articles: any[]): any[] {
       source: 'jstor',
       title: article.title,
       url: article.url,
-      authors: authors || [],
+      authors: parsedAuthors,
       journal: article.journal,
       publicationDate: formattedDate,
       abstract: article.abstract,
@@ -188,7 +227,7 @@ function transformJstorArticles(articles: any[]): any[] {
       
       // Format for display in the UI
       displayTitle: `<a href="${article.url}" target="_blank" rel="noopener noreferrer">${article.title}</a>`,
-      displayAuthors: formatAuthors(authors),
+      displayAuthors: formatAuthors(parsedAuthors),
       displayJournal: article.journal,
       displayDate: formattedDate,
       
@@ -204,7 +243,7 @@ function transformJstorArticles(articles: any[]): any[] {
 /**
  * Format authors for display
  */
-function formatAuthors(authors: any[] = []): string {
+function formatAuthors(authors: Array<{ name: string; identifier?: string }> = []): string {
   if (!authors || authors.length === 0) {
     return '';
   }

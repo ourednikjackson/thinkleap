@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useAuth } from '@/lib/auth';
+import { useUser, SignedIn } from '@clerk/nextjs';
 
 interface SaveSearchButtonProps {
   query: string;
@@ -22,7 +22,7 @@ interface SaveSearchButtonProps {
 }
 
 export function SaveSearchButton({ query, filters }: SaveSearchButtonProps) {
-  const { user } = useAuth();
+  const { user } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -30,6 +30,11 @@ export function SaveSearchButton({ query, filters }: SaveSearchButtonProps) {
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
+    if (!user) {
+      setError('You must be signed in to save searches');
+      return;
+    }
+
     try {
       setIsSaving(true);
       setError(null);
@@ -44,6 +49,7 @@ export function SaveSearchButton({ query, filters }: SaveSearchButtonProps) {
           description,
           query,
           filters,
+          userId: user.id,
         }),
       });
   

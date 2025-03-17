@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth/useAuth';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -11,43 +11,71 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [saveSearchHistory, setSaveSearchHistory] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
-  // In a real app, we would fetch the user's preferences from the backend
+  // Redirect to sign-in if user is not authenticated
   useEffect(() => {
-    // Mock fetching user preferences
+    if (isLoaded && !user) {
+      window.location.href = '/sign-in?redirect_url=/dashboard/settings';
+    }
+  }, [user, isLoaded]);
+
+  // Fetch user preferences from the backend
+  useEffect(() => {
     const fetchPreferences = async () => {
+      if (!user) return;
+
       try {
-        // This would be an actual API call in production
-        // const response = await fetch('/api/users/preferences');
-        // const data = await response.json();
-        // setEmailNotifications(data.emailNotifications);
-        // setSaveSearchHistory(data.saveSearchHistory);
+        const token = await getToken();
+        const response = await fetch('/api/preferences', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (!response.ok) throw new Error('Failed to fetch preferences');
+        const data = await response.json();
+        setEmailNotifications(data.notifications.emailAlerts);
+        setSaveSearchHistory(data.search.saveHistory);
       } catch (error) {
         console.error('Error fetching preferences:', error);
+        toast.error('Failed to load preferences');
       }
     };
 
-    fetchPreferences();
-  }, []);
+    if (user) {
+      fetchPreferences();
+    }
+  }, [user, getToken]);
 
   const handleSavePreferences = async () => {
+    if (!user) {
+      toast.error('You must be signed in to update preferences');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // This would be an actual API call in production
-      // const response = await fetch('/api/users/preferences', {
-      //   method: 'PUT',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({
-      //     emailNotifications,
-      //     saveSearchHistory,
-      //   }),
-      // });
+      const token = await getToken();
+      const response = await fetch('/api/preferences', {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notifications: {
+            emailAlerts: emailNotifications
+          },
+          search: {
+            saveHistory: saveSearchHistory
+          }
+        }),
+      });
 
       // if (!response.ok) {
       //   throw new Error('Failed to update preferences');

@@ -1,40 +1,70 @@
-// Database connection for frontend
-import knex from 'knex';
-import { logger } from './logger';
+// Database configuration and client for JSTOR integration
+import type { Pool, QueryResult, QueryConfig } from 'pg';
 
-// Use environment variables or defaults for database connection
-const dbConfig = {
-  client: 'pg',
-  connection: {
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432'),
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
-    database: process.env.DB_NAME || 'thinkleap',
-  },
-  pool: {
-    min: 2,
-    max: 10
-  },
-  // Helps identify and debug slow queries in development
-  debug: process.env.NODE_ENV !== 'production'
-};
+// Database client interface
+export interface DbClient {
+  query<T extends Record<string, any>>(
+    queryTextOrConfig: string | QueryConfig,
+    values?: any[]
+  ): Promise<QueryResult<T>>;
+  testConnection(): Promise<void>;
+}
 
-// Initialize database connection
-let _db: any = null;
+let pool: Pool | null = null;
 
-export function getDb() {
-  if (!_db) {
+// Initialize the database pool
+async function initializePool() {
+  if (!pool) {
     try {
-      _db = knex(dbConfig);
-      logger.info('Database connection initialized');
+      // Check if we're in a server context
+      if (typeof window !== 'undefined') {
+        throw new Error('Database operations can only be performed on the server');
+      }
+
+      // Get database configuration from environment
+      const dbUrl = process.env.JSTOR_DATABASE_URL || process.env.DATABASE_URL;
+      if (!dbUrl) {
+        throw new Error('Database URL not configured');
+      }
+
+      // Dynamically import pg in a server context
+      const pg = await import('pg');
+      
+      pool = new pg.Pool({
+        connectionString: dbUrl,
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      });
+
+      // Add error handler for database connection issues
+      pool.on('error', (err) => {
+        console.error('Database connection error:', err);
+        pool = null; // Reset pool on error
+      });
     } catch (error) {
-      logger.error('Failed to initialize database connection', error);
+      console.error('Error initializing database pool:', error);
       throw error;
     }
   }
-  return _db;
+  return pool;
 }
 
-// Export a singleton instance
-export const db = getDb();
+// Export the database interface
+export const db: DbClient = {
+  query: async <T extends Record<string, any>>(
+    queryTextOrConfig: string | QueryConfig,
+    values?: any[]
+  ): Promise<QueryResult<T>> => {
+    const pool = await initializePool();
+    return pool.query(queryTextOrConfig, values);
+  },
+  testConnection: async () => {
+    try {
+      const pool = await initializePool();
+      await pool.query('SELECT NOW()');
+      console.log('Successfully connected to the database');
+    } catch (error) {
+      console.error('Failed to connect to the database:', error);
+      throw error;
+    }
+  },
+};

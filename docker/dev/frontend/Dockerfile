@@ -4,12 +4,11 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package files first for better caching
-COPY package.json package-lock.json ./
+# Copy package.json first
+COPY package.json ./
 
-# Install dependencies with more reliable flags
+# Install dependencies and generate package-lock.json
 RUN npm install
-RUN npm ci --legacy-peer-deps
 
 # Copy the rest of the application code
 COPY . .
@@ -17,5 +16,5 @@ COPY . .
 # Expose port
 EXPOSE 3000
 
-# Start development server
-CMD ["sh", "-c", "npm install && npm run dev"]
+# Start development server with hot reloading
+CMD ["npm", "run", "dev"]

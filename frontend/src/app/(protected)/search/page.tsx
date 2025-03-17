@@ -3,23 +3,23 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth';
+import { useUser } from '@clerk/nextjs';
 import { usePreferences } from '@/lib/preferences/PreferencesContext';
 import { SearchForm } from '@/components/search/SearchForm';
 import { FilterPanel } from '@/components/search/FilterPanel';
 import { SearchResults } from '@/components/search/SearchResults';
-import { SearchResponse, SearchFilters } from '@thinkleap/shared/types/search';
+import { SearchResult, SearchFilters } from '@thinkleap/shared/types/search';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function SearchPage() {
-  const { user } = useAuth();
+  const { user, isLoaded } = useUser();
   const { preferences } = usePreferences();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<{data: SearchResponse} | null>(null);
+  const [results, setResults] = useState<{data: SearchResult} | null>(null);
 
   // Initialize filters with empty arrays for authors and journals
   const [filters, setFilters] = useState<SearchFilters>({
@@ -31,10 +31,10 @@ export default function SearchPage() {
   });
 
   useEffect(() => {
-    if (!user) {
-      router.push('/auth/login?redirect=/dashboard/search');
+    if (isLoaded && !user) {
+      router.push('/sign-in?redirect_url=/search');
     }
-  }, [user, router]);
+  }, [user, isLoaded, router]);
 
   const handleSearch = async (query: string, page = 1) => {
     if (!query || query.trim() === '') return;
@@ -105,7 +105,7 @@ export default function SearchPage() {
       </Card>
 
       {error && (
-        <Alert variant={isNetworkError ? "warning" : "destructive"}>
+        <Alert variant="destructive">
           <AlertDescription>
             {isNetworkError ? (
               <>

@@ -1,15 +1,9 @@
 import express, { Express, Request, Response, NextFunction, Router } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import passport from 'passport';
-import cookieParser from 'cookie-parser';
-import session from 'express-session';
-import authRoutes from './routes/auth.routes';
-import userRoutes from './routes/user.routes';
 import searchRoutes from './routes/search.routes';
 import savedSearchRoutes from './routes/saved-search.routes';
 import preferencesRoutes from './routes/preferences.routes';
-import samlRoutes from './routes/saml.routes';
 import metadataRoutes from './routes/metadata.routes';
 import oaiPmhRoutes from './routes/oai-pmh';
 import { CacheService } from './services/cache';
@@ -42,24 +36,6 @@ export class App {
   private setupMiddleware(): void {
     // Enable JSON body parsing
     this.app.use(express.json());
-    
-    // Enable cookie parsing
-    this.app.use(cookieParser());
-    
-    // Add express-session middleware for passport
-    this.app.use(session({
-      secret: this.config.env.session?.secret || 'thinkleap-secret',
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: this.config.NODE_ENV === 'production',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-      }
-    }));
-    
-    // Initialize passport
-    this.app.use(passport.initialize());
-    this.app.use(passport.session());
     
     this.app.use(compression());
 
@@ -152,9 +128,7 @@ export class App {
     });
     this.app.use('/health', healthRouter);
 
-    this.app.use('/api/auth', authRoutes);
-    this.app.use('/api/auth/saml', samlRoutes);
-    this.app.use('/api/users', userRoutes);
+
     this.app.use('/api', searchRoutes);
     this.app.use('/api/saved-searches', savedSearchRoutes);
     this.app.use('/api/preferences', preferencesRoutes);

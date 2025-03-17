@@ -1,18 +1,18 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useAuth } from '@/lib/auth';
+import { useUser } from '@clerk/nextjs';
 import { usePreferences } from '@/lib/preferences/PreferencesContext';
 import { SearchForm } from '@/components/search/SearchForm';
 import { FilterPanel } from '@/components/search/FilterPanel';
 import { SearchResults } from '@/components/search/SearchResults';
 import SearchSourceSelector from '@/components/search/SearchSourceSelector';
-import { SearchResponse, SearchFilters, SearchResult } from '@thinkleap/shared/types/search';
+import { SearchFilters, SearchResult } from '@thinkleap/shared/types/search';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function SearchPage() {
-  const { user } = useAuth();
+  const { user, isLoaded } = useUser();
   const { preferences } = usePreferences();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
@@ -41,11 +41,19 @@ export default function SearchPage() {
     }
   }, [preferences]);
 
-  // Authentication check is handled by middleware
-  // No need to redirect here as it causes loops
+  // Redirect to sign-in if user is not authenticated
+  useEffect(() => {
+    if (isLoaded && !user) {
+      window.location.href = '/sign-in?redirect_url=/dashboard/search';
+    }
+  }, [user, isLoaded]);
 
   const handleSearch = async (query: string, page = 1) => {
     if (!query || query.trim() === '') return;
+    if (!user) {
+      setError('You must be signed in to search');
+      return;
+    }
     
     try {
       setIsLoading(true);
