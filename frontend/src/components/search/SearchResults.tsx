@@ -19,8 +19,8 @@ interface SearchResultsProps {
 
 export function SearchResults({ results, isLoading, onPageChange, filters = {} }: SearchResultsProps) {
   const searchParams = useSearchParams();
-  const { preferences } = usePreferences();
-  const isDense = preferences.display.density === 'compact';
+  const { preferences, isLoading: preferencesLoading } = usePreferences();
+  const isDense = preferences?.display?.density === 'compact';
 
   const formatAuthors = (authors: SearchResultItem['authors']) => {
     if (authors.length === 0) return 'No authors listed';

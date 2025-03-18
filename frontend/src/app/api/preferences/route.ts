@@ -1,63 +1,98 @@
 // API route for user preferences
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuth } from '@clerk/nextjs/server';
+import { DEFAULT_PREFERENCES } from '../../../lib/preferences/PreferencesContext';
+
+// Helper to validate auth token
+async function validateAuth(request: NextRequest) {
+  const { userId } = getAuth(request);
+  if (!userId) {
+    throw new Error('Unauthorized');
+  }
+  return userId;
+}
 
 export async function GET(request: NextRequest) {
   try {
-    // Proxy to backend
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/preferences`, {
-      headers: {
-        'Authorization': request.headers.get('Authorization') || '',
-        'Cookie': request.headers.get('Cookie') || '',
-      },
-      credentials: 'include',
-    });
+    const userId = await validateAuth(request);
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { message: 'Failed to fetch preferences' },
-        { status: response.status }
-      );
-    }
-    
-    const data = await response.json();
-    return NextResponse.json(data);
+    // For now, return default preferences since we're transitioning from the old auth system
+    // This ensures the app continues to work while we implement the new preferences storage
+    return NextResponse.json({
+      data: DEFAULT_PREFERENCES,
+      userId
+    });
   } catch (error) {
+    console.error('Error in preferences GET:', error);
     return NextResponse.json(
-      { message: 'Error fetching preferences' },
-      { status: 500 }
+      { message: error instanceof Error ? error.message : 'Error fetching preferences' },
+      { status: error instanceof Error && error.message === 'Unauthorized' ? 401 : 500 }
     );
   }
 }
 
 export async function PATCH(request: NextRequest) {
   try {
+    const userId = await validateAuth(request);
     const body = await request.json();
-    
-    // Proxy to backend
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/preferences`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': request.headers.get('Authorization') || '',
-        'Cookie': request.headers.get('Cookie') || '',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-      credentials: 'include',
-    });
 
-    if (!response.ok) {
+    // Validate the request body
+    if (!body.path || !Array.isArray(body.path) || body.value === undefined) {
       return NextResponse.json(
-        { message: 'Failed to update preferences' },
-        { status: response.status }
+        { message: 'Invalid request body' },
+        { status: 400 }
       );
     }
+
+    // For now, return the default preferences with the updated value
+    // This ensures the app continues to work while we implement the new preferences storage
+    const updatedPreferences = { ...DEFAULT_PREFERENCES };
+    let current: any = updatedPreferences;
     
-    const data = await response.json();
-    return NextResponse.json(data);
+    // Type-safe path traversal
+    const validPaths = ['search', 'display', 'notifications'] as const;
+    type ValidPath = typeof validPaths[number];
+    
+    const validSubPaths: Record<ValidPath, string[]> = {
+      search: ['resultsPerPage', 'defaultSortOrder', 'defaultFilters'],
+      display: ['theme', 'density'],
+      notifications: ['emailAlerts', 'searchUpdates', 'newFeatures']
+    };
+    
+    // Validate path
+    const rootPath = body.path[0];
+    if (!validPaths.includes(rootPath)) {
+      return NextResponse.json(
+        { message: 'Invalid preference path' },
+        { status: 400 }
+      );
+    }
+
+    // Update the preference value
+    for (let i = 0; i < body.path.length - 1; i++) {
+      const pathSegment = body.path[i];
+      if (i === 0 && !validPaths.includes(pathSegment)) {
+        throw new Error('Invalid preference path');
+      }
+      current = current[pathSegment];
+    }
+    
+    const finalPath = body.path[body.path.length - 1];
+    if (!validSubPaths[rootPath as ValidPath].includes(finalPath)) {
+      throw new Error('Invalid preference path');
+    }
+    
+    current[finalPath] = body.value;
+
+    return NextResponse.json({
+      data: updatedPreferences,
+      userId
+    });
   } catch (error) {
+    console.error('Error in preferences PATCH:', error);
     return NextResponse.json(
-      { message: 'Error updating preferences' },
-      { status: 500 }
+      { message: error instanceof Error ? error.message : 'Error updating preferences' },
+      { status: error instanceof Error && error.message === 'Unauthorized' ? 401 : 500 }
     );
   }
 }
